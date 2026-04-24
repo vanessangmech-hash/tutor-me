@@ -14,7 +14,6 @@ import {
   Users, 
   Sparkles, 
   Zap,
-  Lock,
   ArrowRight,
   Palette,
   Brain,
@@ -179,42 +178,15 @@ export default function CreatePage() {
                     </Link>
                   </Button>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-card/60">
-                      <Lock className="h-4 w-4" />
-                      <span className="text-sm">Sign in to create rooms</span>
-                    </div>
-                    <Button 
-                      className="rounded-full bg-card text-foreground hover:bg-card/90"
-                      onClick={() => setShowAuth(true)}
-                    >
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Sign In to Create
-                    </Button>
-                  </div>
+                  <Button 
+                    className="rounded-full bg-card text-foreground hover:bg-card/90"
+                    onClick={() => setShowAuth(true)}
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Sign In to Create
+                  </Button>
                 )}
               </div>
-
-              {/* Locked overlay for non-logged in users */}
-              {!isLoggedIn && (
-                <motion.div
-                  className="absolute inset-0 flex items-center justify-center bg-foreground/50 backdrop-blur-[2px]"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                >
-                  <motion.div
-                    className="flex flex-col items-center gap-3"
-                    animate={{ y: [0, -5, 0] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                  >
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-card/20 backdrop-blur-sm">
-                      <Lock className="h-8 w-8 text-card" />
-                    </div>
-                    <p className="text-sm font-medium text-card">Sign in to unlock</p>
-                  </motion.div>
-                </motion.div>
-              )}
             </motion.div>
             
             {/* Join Room Card */}
@@ -283,43 +255,16 @@ export default function CreatePage() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Lock className="h-4 w-4" />
-                      <span className="text-sm">Sign in to join rooms</span>
-                    </div>
-                    <Button 
-                      variant="outline"
-                      className="rounded-full"
-                      onClick={() => setShowAuth(true)}
-                    >
-                      <Zap className="mr-2 h-4 w-4" />
-                      Sign In to Join
-                    </Button>
-                  </div>
+                  <Button 
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => setShowAuth(true)}
+                  >
+                    <Zap className="mr-2 h-4 w-4" />
+                    Sign In to Join
+                  </Button>
                 )}
               </div>
-
-              {/* Locked overlay for non-logged in users */}
-              {!isLoggedIn && (
-                <motion.div
-                  className="absolute inset-0 flex items-center justify-center bg-card/50 backdrop-blur-[2px]"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                >
-                  <motion.div
-                    className="flex flex-col items-center gap-3"
-                    animate={{ y: [0, -5, 0] }}
-                    transition={{ repeat: Infinity, duration: 2, delay: 0.3 }}
-                  >
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-foreground/10 backdrop-blur-sm">
-                      <Lock className="h-8 w-8 text-foreground" />
-                    </div>
-                    <p className="text-sm font-medium text-foreground">Sign in to unlock</p>
-                  </motion.div>
-                </motion.div>
-              )}
             </motion.div>
           </div>
 
