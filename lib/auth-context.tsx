@@ -1,10 +1,12 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react"
+import { insforge } from "@/lib/insforge"
 
 export type UserPlan = "free" | "student" | "professional"
 
 export interface User {
+  id: string
   name: string
   email: string
   avatar: string
@@ -14,61 +16,76 @@ export interface User {
 interface AuthContextType {
   user: User | null
   isLoggedIn: boolean
-  login: (email: string, password: string, plan?: UserPlan) => Promise<void>
+  isLoading: boolean
+  login: (email: string, password: string) => Promise<void>
   signup: (name: string, email: string, password: string, plan: UserPlan) => Promise<void>
   logout: () => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
+function mapInsforgeUser(insforgeUser: any, plan?: UserPlan): User {
+  return {
+    id: insforgeUser.id,
+    name: insforgeUser.profile?.name || insforgeUser.email?.split("@")[0] || "User",
+    email: insforgeUser.email,
+    avatar: insforgeUser.profile?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(insforgeUser.profile?.name || insforgeUser.email)}`,
+    plan: (insforgeUser.metadata?.plan as UserPlan) || plan || "free",
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Check localStorage on mount for persistent login
-  useEffect(() => {
-    const savedUser = localStorage.getItem("tutorme_user")
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
+  const loadCurrentUser = useCallback(async () => {
+    try {
+      const { data, error } = await insforge.auth.getCurrentUser()
+      if (!error && data?.user) {
+        setUser(mapInsforgeUser(data.user))
+      } else {
+        setUser(null)
+      }
+    } catch {
+      setUser(null)
+    } finally {
+      setIsLoading(false)
     }
   }, [])
 
-  const login = async (email: string, password: string, plan: UserPlan = "free") => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    
-    const newUser: User = {
-      name: email.split("@")[0],
-      email,
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop",
-      plan
+  useEffect(() => {
+    loadCurrentUser()
+  }, [loadCurrentUser])
+
+  const login = async (email: string, password: string) => {
+    const { data, error } = await insforge.auth.signInWithPassword({ email, password })
+    if (error) throw new Error(error.message || "Login failed")
+    if (data?.user) {
+      setUser(mapInsforgeUser(data.user))
     }
-    
-    setUser(newUser)
-    localStorage.setItem("tutorme_user", JSON.stringify(newUser))
   }
 
   const signup = async (name: string, email: string, password: string, plan: UserPlan) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    
-    const newUser: User = {
-      name,
-      email,
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop",
-      plan
+    const { data, error } = await insforge.auth.signUp({ email, password, name })
+    if (error) throw new Error(error.message || "Signup failed")
+
+    if (data?.requireEmailVerification) {
+      throw new Error("Please check your email to verify your account before signing in.")
     }
-    
-    setUser(newUser)
-    localStorage.setItem("tutorme_user", JSON.stringify(newUser))
+
+    if (data?.user) {
+      await insforge.auth.setProfile({ name, plan })
+      setUser(mapInsforgeUser(data.user, plan))
+    }
   }
 
-  const logout = () => {
+  const logout = async () => {
+    await insforge.auth.signOut()
     setUser(null)
-    localStorage.removeItem("tutorme_user")
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, isLoading, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   )

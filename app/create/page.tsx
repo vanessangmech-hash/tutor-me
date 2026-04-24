@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import { AuthModal } from "@/components/auth-modal"
@@ -9,6 +10,7 @@ import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/auth-context"
+import { joinRoom } from "@/lib/api"
 import { 
   Plus, 
   Users, 
@@ -19,7 +21,8 @@ import {
   Palette,
   Brain,
   Wand2,
-  Play
+  Play,
+  Loader2
 } from "lucide-react"
 
 // Floating particles component
@@ -53,9 +56,25 @@ function FloatingParticles() {
 }
 
 export default function CreatePage() {
+  const router = useRouter()
   const [showAuth, setShowAuth] = useState(false)
   const [joinCode, setJoinCode] = useState("")
+  const [isJoining, setIsJoining] = useState(false)
+  const [joinError, setJoinError] = useState<string | null>(null)
   const { isLoggedIn } = useAuth()
+
+  const handleJoinRoom = async () => {
+    if (!joinCode.trim() || !isLoggedIn) return
+    setIsJoining(true)
+    setJoinError(null)
+    try {
+      const res = await joinRoom(joinCode)
+      router.push(`/rooms/${res.room.id}`)
+    } catch (err: any) {
+      setJoinError(err.message || "Failed to join room")
+      setIsJoining(false)
+    }
+  }
 
   const features = [
     { icon: Palette, title: "Custom Personas", desc: "Design your tutor's personality" },
@@ -170,13 +189,11 @@ export default function CreatePage() {
                 {isLoggedIn ? (
                   <Button 
                     className="rounded-full bg-card text-foreground hover:bg-card/90"
-                    asChild
+                    onClick={() => router.push("/rooms?action=create")}
                   >
-                    <Link href="/rooms?action=create">
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Create Room
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Create Room
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 ) : (
                   <div className="space-y-3">
@@ -264,23 +281,29 @@ export default function CreatePage() {
                 </p>
                 
                 {isLoggedIn ? (
-                  <div className="flex gap-3">
-                    <Input 
-                      placeholder="Enter room code..." 
-                      value={joinCode}
-                      onChange={(e) => setJoinCode(e.target.value)}
-                      className="h-12 rounded-full border-0 bg-muted/50"
-                    />
-                    <Button 
-                      variant="outline" 
-                      className="h-12 rounded-full border-foreground/20 px-6"
-                      asChild
-                    >
-                      <Link href={`/rooms/${joinCode || 'join'}`}>
-                        <Zap className="mr-2 h-4 w-4" />
+                  <div className="space-y-2">
+                    <div className="flex gap-3">
+                      <Input 
+                        placeholder="Enter room code..." 
+                        value={joinCode}
+                        onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === "Enter" && handleJoinRoom()}
+                        className="h-12 rounded-full border-0 bg-muted/50 font-mono uppercase"
+                        maxLength={8}
+                      />
+                      <Button 
+                        variant="outline" 
+                        className="h-12 rounded-full border-foreground/20 px-6"
+                        onClick={handleJoinRoom}
+                        disabled={isJoining || !joinCode.trim()}
+                      >
+                        {isJoining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
                         Join
-                      </Link>
-                    </Button>
+                      </Button>
+                    </div>
+                    {joinError && (
+                      <p className="text-xs text-destructive">{joinError}</p>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">

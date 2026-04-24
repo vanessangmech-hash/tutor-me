@@ -103,6 +103,18 @@ export default async function (req) {
   if (req.method === 'GET') {
     const roomCode = url.searchParams.get('code');
     const roomId = url.searchParams.get('id');
+    const listActive = url.searchParams.get('list_active');
+
+    if (listActive === 'true') {
+      const { data, error } = await client.database
+        .from('rooms')
+        .select('*, personas(id, name, subject, system_prompt, teaching_style)')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (error) return json({ error: error.message }, 500);
+      return json({ rooms: data || [] });
+    }
 
     let query = client.database
       .from('rooms')

@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowRight, User, LogOut, Settings, ChevronDown } from "lucide-react"
@@ -73,12 +72,13 @@ export function Navbar({ onAuthClick }: { onAuthClick?: () => void }) {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={user.avatar}
                 alt={user.name}
                 width={28}
                 height={28}
-                className="rounded-full object-cover"
+                className="h-7 w-7 rounded-full object-cover"
               />
               <span className="text-sm font-medium text-foreground">{user.name}</span>
               <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showDropdown ? "rotate-180" : ""}`} />

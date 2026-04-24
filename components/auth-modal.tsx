@@ -21,11 +21,13 @@ export function AuthModal({ isOpen, onClose, onSuccess, defaultMode = "login" }:
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [selectedPlan, setSelectedPlan] = useState<UserPlan>("free")
+  const [error, setError] = useState<string | null>(null)
   const { login, signup } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError(null)
     
     try {
       if (mode === "login") {
@@ -35,13 +37,13 @@ export function AuthModal({ isOpen, onClose, onSuccess, defaultMode = "login" }:
       }
       onSuccess?.()
       onClose()
-      // Reset form
       setName("")
       setEmail("")
       setPassword("")
       setSelectedPlan("free")
-    } catch (error) {
-      console.error("Auth error:", error)
+      setError(null)
+    } catch (err: any) {
+      setError(err.message || "Authentication failed. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -100,6 +102,15 @@ export function AuthModal({ isOpen, onClose, onSuccess, defaultMode = "login" }:
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="p-8">
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive"
+                  >
+                    {error}
+                  </motion.div>
+                )}
                 <div className="space-y-4">
                   <AnimatePresence mode="wait">
                     {mode === "signup" && (

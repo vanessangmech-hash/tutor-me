@@ -1,22 +1,53 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import { AuthModal } from "@/components/auth-modal"
 import { TutorModal } from "@/components/tutor-modal"
 import { useAuth } from "@/lib/auth-context"
-import { tutors, categories, type Tutor } from "@/lib/tutors-data"
+import { tutors as staticTutors, categories, type Tutor } from "@/lib/tutors-data"
+import { listPublicPersonas, type Persona } from "@/lib/api"
 import { Search, SlidersHorizontal, Plus, Star, Play, Users, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-function TutorCard({ 
-  tutor, 
-  index, 
+function personaToTutor(p: Persona): Tutor {
+  const traits = p.personality_traits || {}
+  return {
+    id: p.id,
+    name: p.name,
+    subject: p.subject,
+    thumbnail: traits.thumbnail || `https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=600&fit=crop`,
+    views: `${Math.floor((p.times_used || 0) / 10)}K`,
+    saves: p.total_rewards || 0,
+    tags: [p.subject, p.teaching_style?.approach || "Adaptive", p.teaching_style?.detail_level || "All Levels"],
+    category: traits.category || mapSubjectToCategory(p.subject),
+    description: p.system_prompt?.slice(0, 150) + "..." || `Learn ${p.subject} with ${p.name}`,
+    rating: Math.min(5, 4.5 + (p.total_rewards || 0) / 1000),
+    sessions: p.times_used || 0,
+    persona: traits.persona_label || p.teaching_style?.approach || "AI Tutor",
+    personality: traits.personality || p.system_prompt?.slice(0, 100) || `I'm ${p.name}, ready to teach you ${p.subject}!`,
+    videoPreview: traits.videoPreview || traits.thumbnail,
+  }
+}
+
+function mapSubjectToCategory(subject: string): string {
+  const s = subject.toLowerCase()
+  if (s.includes("math") || s.includes("calculus") || s.includes("algebra")) return "Math"
+  if (s.includes("physics") || s.includes("chemistry") || s.includes("biology")) return "Science"
+  if (s.includes("code") || s.includes("program") || s.includes("data")) return "Coding"
+  if (s.includes("spanish") || s.includes("french") || s.includes("writing") || s.includes("language")) return "Languages"
+  if (s.includes("business") || s.includes("econ")) return "Business"
+  return "For you"
+}
+
+function TutorCard({
+  tutor,
+  index,
   onClick,
-  isLoggedIn
-}: { 
+  isLoggedIn,
+}: {
   tutor: Tutor
   index: number
   onClick: () => void
@@ -36,14 +67,12 @@ function TutorCard({
       onMouseLeave={() => setIsHovered(false)}
       className="group relative aspect-[3/4] w-full overflow-hidden rounded-3xl text-left"
     >
-      {/* Background Image / Video Preview */}
       <div className="absolute inset-0">
         <div
           className="h-full w-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
           style={{ backgroundImage: `url(${tutor.thumbnail})` }}
         />
-        
-        {/* Video preview overlay on hover when logged in */}
+
         <AnimatePresence>
           {isHovered && isLoggedIn && (
             <motion.div
@@ -58,7 +87,6 @@ function TutorCard({
                 fill
                 className="object-cover"
               />
-              {/* Fake video player UI */}
               <div className="absolute bottom-16 left-3 right-3">
                 <div className="h-1 w-full overflow-hidden rounded-full bg-card/30">
                   <motion.div
@@ -73,11 +101,9 @@ function TutorCard({
           )}
         </AnimatePresence>
       </div>
-      
-      {/* Gradient Overlay */}
+
       <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/40 to-transparent opacity-80 transition-opacity group-hover:opacity-90" />
-      
-      {/* Play Button on Hover */}
+
       <motion.div
         initial={{ opacity: 0, scale: 0.5 }}
         animate={{ opacity: isHovered ? 1 : 0, scale: isHovered ? 1 : 0.5 }}
@@ -85,32 +111,27 @@ function TutorCard({
       >
         <Play className="ml-1 h-6 w-6" />
       </motion.div>
-      
-      {/* Persona Badge */}
+
       <motion.div
         className="absolute left-3 top-3 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground backdrop-blur-sm"
         whileHover={{ scale: 1.05 }}
       >
         {tutor.persona}
       </motion.div>
-      
-      {/* Rating Badge */}
+
       <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-card/80 px-2 py-1 text-xs font-medium text-foreground backdrop-blur-sm">
         <Star className="h-3 w-3 fill-accent text-accent" />
-        {tutor.rating}
+        {tutor.rating.toFixed(1)}
       </div>
-      
-      {/* Content */}
+
       <div className="absolute bottom-0 left-0 right-0 p-5">
         <p className="text-lg font-bold text-card">{tutor.name}</p>
         <p className="text-sm text-card/70">{tutor.subject}</p>
-        
-        {/* Personality Preview */}
+
         <p className="mt-2 line-clamp-2 text-xs italic text-card/60">
           &ldquo;{tutor.personality}&rdquo;
         </p>
-        
-        {/* Stats */}
+
         <div className="mt-3 flex items-center gap-3 text-xs text-card/70">
           <span className="flex items-center gap-1">
             <Users className="h-3 w-3" />
@@ -118,11 +139,13 @@ function TutorCard({
           </span>
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
-            {(tutor.sessions / 1000).toFixed(1)}k sessions
+            {tutor.sessions >= 1000
+              ? `${(tutor.sessions / 1000).toFixed(1)}k`
+              : tutor.sessions}{" "}
+            sessions
           </span>
         </div>
-        
-        {/* Tags */}
+
         <div className="mt-3 flex flex-wrap gap-1.5">
           {tutor.tags.slice(0, 2).map((tag) => (
             <span
@@ -144,27 +167,47 @@ export default function TutorsPage() {
   const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null)
   const [visibleCount, setVisibleCount] = useState(12)
   const [showAuth, setShowAuth] = useState(false)
+  const [allTutors, setAllTutors] = useState<Tutor[]>(staticTutors)
   const { isLoggedIn } = useAuth()
 
+  useEffect(() => {
+    listPublicPersonas()
+      .then((res) => {
+        if (res.personas?.length > 0) {
+          const backendTutors = res.personas.map(personaToTutor)
+          const staticIds = new Set(staticTutors.map((t) => t.id))
+          const merged = [
+            ...backendTutors.filter((t) => !staticIds.has(t.id)),
+            ...staticTutors,
+          ]
+          setAllTutors(merged)
+        }
+      })
+      .catch(() => {
+        // Keep static tutors as fallback
+      })
+  }, [])
+
   const filteredTutors = useMemo(() => {
-    let filtered = tutors
+    let filtered = allTutors
 
     if (activeCategory !== "For you") {
-      filtered = filtered.filter(t => t.category === activeCategory)
+      filtered = filtered.filter((t) => t.category === activeCategory)
     }
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(t => 
-        t.name.toLowerCase().includes(query) ||
-        t.subject.toLowerCase().includes(query) ||
-        t.tags.some(tag => tag.toLowerCase().includes(query)) ||
-        t.persona.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        (t) =>
+          t.name.toLowerCase().includes(query) ||
+          t.subject.toLowerCase().includes(query) ||
+          t.tags.some((tag) => tag.toLowerCase().includes(query)) ||
+          t.persona.toLowerCase().includes(query)
       )
     }
 
     return filtered
-  }, [searchQuery, activeCategory])
+  }, [searchQuery, activeCategory, allTutors])
 
   const visibleTutors = filteredTutors.slice(0, visibleCount)
   const hasMore = visibleCount < filteredTutors.length
@@ -180,17 +223,14 @@ export default function TutorsPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar onAuthClick={() => setShowAuth(true)} />
-      <AuthModal 
-        isOpen={showAuth} 
+      <AuthModal
+        isOpen={showAuth}
         onClose={() => setShowAuth(false)}
-        onSuccess={() => {
-          // After login success, if there was a pending tutor selection, we could handle it here
-        }}
+        onSuccess={() => {}}
       />
-      
+
       <main className="px-6 pb-20 pt-32 lg:px-12">
         <div className="mx-auto max-w-7xl">
-          {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -210,8 +250,7 @@ export default function TutorsPage() {
               Each tutor has their own vibe. Find the one that matches yours.
             </p>
           </motion.div>
-          
-          {/* Search Bar */}
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -225,10 +264,10 @@ export default function TutorsPage() {
                 placeholder="Search by name, subject, or persona..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-14 w-full rounded-full border border-border bg-card pl-12 pr-4 text-foreground shadow-sm placeholder:text-muted-foreground transition-all focus:border-foreground focus:outline-none focus:ring-2 focus:ring-foreground/10"
+                className="h-14 w-full rounded-full border border-border bg-card pl-12 pr-4 text-foreground shadow-sm transition-all placeholder:text-muted-foreground focus:border-foreground focus:outline-none focus:ring-2 focus:ring-foreground/10"
               />
             </div>
-            <motion.button 
+            <motion.button
               className="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-all hover:border-foreground hover:text-foreground"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -236,8 +275,7 @@ export default function TutorsPage() {
               <SlidersHorizontal className="h-5 w-5" />
             </motion.button>
           </motion.div>
-          
-          {/* Category Filters */}
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -263,7 +301,7 @@ export default function TutorsPage() {
                 {category}
               </motion.button>
             ))}
-            <motion.button 
+            <motion.button
               className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-border text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
               whileHover={{ scale: 1.1, rotate: 90 }}
               whileTap={{ scale: 0.9 }}
@@ -271,8 +309,7 @@ export default function TutorsPage() {
               <Plus className="h-4 w-4" />
             </motion.button>
           </motion.div>
-          
-          {/* Login prompt if not logged in */}
+
           {!isLoggedIn && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -290,8 +327,7 @@ export default function TutorsPage() {
               </button>
             </motion.div>
           )}
-          
-          {/* Tutors Grid */}
+
           <AnimatePresence mode="wait">
             {visibleTutors.length > 0 ? (
               <motion.div
@@ -325,8 +361,7 @@ export default function TutorsPage() {
               </motion.div>
             )}
           </AnimatePresence>
-          
-          {/* Load More */}
+
           {hasMore && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -335,7 +370,7 @@ export default function TutorsPage() {
               className="mt-16 flex justify-center"
             >
               <motion.button
-                onClick={() => setVisibleCount(prev => prev + 8)}
+                onClick={() => setVisibleCount((prev) => prev + 8)}
                 className="group flex items-center gap-2 rounded-full bg-foreground px-8 py-4 font-medium text-card transition-all hover:shadow-lg"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -352,12 +387,8 @@ export default function TutorsPage() {
           )}
         </div>
       </main>
-      
-      {/* Tutor Detail Modal */}
-      <TutorModal 
-        tutor={selectedTutor} 
-        onClose={() => setSelectedTutor(null)} 
-      />
+
+      <TutorModal tutor={selectedTutor} onClose={() => setSelectedTutor(null)} />
     </div>
   )
 }

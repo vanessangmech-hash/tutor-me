@@ -1,15 +1,27 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { rooms } from "@/lib/rooms-data"
-import { 
-  ArrowLeft, 
-  Copy, 
+import { useAuth } from "@/lib/auth-context"
+import {
+  getRoom,
+  sendMessage as apiSendMessage,
+  recordReward,
+  leaveRoom,
+  subscribeToRoom,
+  onRoomMessage,
+  offRoomMessage,
+  disconnectRealtime,
+  type Room,
+  type RoomMember,
+} from "@/lib/api"
+import {
+  ArrowLeft,
+  Copy,
   Check,
   Hand,
   HelpCircle,
@@ -19,7 +31,10 @@ import {
   Users,
   Sparkles,
   MessageCircle,
-  X
+  X,
+  Loader2,
+  ExternalLink,
+  LogOut,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -28,104 +43,348 @@ interface Message {
   sender: "user" | "ai" | "system"
   content: string
   timestamp: Date
+  sources?: { title: string; url: string }[]
+  rewardGranted?: boolean
 }
-
-const participants = [
-  { id: "1", name: "You", avatar: "Y", isYou: true },
-  { id: "2", name: "Alex", avatar: "A", isYou: false },
-  { id: "3", name: "Maria", avatar: "M", isYou: false },
-  { id: "4", name: "James", avatar: "J", isYou: false },
-  { id: "5", name: "Sophie", avatar: "S", isYou: false },
-]
-
-const initialMessages: Message[] = [
-  {
-    id: "1",
-    sender: "system",
-    content: "Session started. Welcome to the classroom!",
-    timestamp: new Date(Date.now() - 1000 * 60 * 15)
-  },
-  {
-    id: "2",
-    sender: "ai",
-    content: "Hello everyone! Today we'll be exploring the fundamentals of our topic. Let's start with the basics and build up from there. Feel free to ask questions anytime!",
-    timestamp: new Date(Date.now() - 1000 * 60 * 14)
-  },
-  {
-    id: "3",
-    sender: "user",
-    content: "Can you explain this concept in simpler terms?",
-    timestamp: new Date(Date.now() - 1000 * 60 * 10)
-  },
-  {
-    id: "4",
-    sender: "ai",
-    content: "Of course! Think of it like building blocks. Each block represents a fundamental piece. When we stack them together in the right way, we create something meaningful!",
-    timestamp: new Date(Date.now() - 1000 * 60 * 9)
-  }
-]
 
 export default function RoomPage() {
   const params = useParams()
+  const router = useRouter()
   const roomId = params.id as string
-  const room = rooms.find(r => r.id === roomId) || rooms[0]
-  
-  const [messages, setMessages] = useState<Message[]>(initialMessages)
+  const { user, isLoggedIn } = useAuth()
+
+  const [room, setRoom] = useState<Room | null>(null)
+  const [members, setMembers] = useState<RoomMember[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [copied, setCopied] = useState(false)
   const [activeReaction, setActiveReaction] = useState<string | null>(null)
   const [showChat, setShowChat] = useState(false)
   const [showParticipants, setShowParticipants] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const [isLoadingRoom, setIsLoadingRoom] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  
-  const roomCode = roomId?.toUpperCase().slice(0, 8) || "ROOM-001"
-  
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
-  
+
   useEffect(() => {
     scrollToBottom()
   }, [messages])
-  
+
+  const loadRoom = useCallback(async () => {
+    setIsLoadingRoom(true)
+    setLoadError(null)
+    try {
+      const res = await getRoom({ id: roomId })
+      setRoom(res.room)
+      setMembers(res.members || [])
+      setMessages([
+        {
+          id: "system-start",
+          sender: "system",
+          content: `Welcome to ${res.room.personas?.name || "AI Tutor"}'s classroom! Room code: ${res.room.room_code}`,
+          timestamp: new Date(res.room.created_at),
+        },
+        {
+          id: "ai-welcome",
+          sender: "ai",
+          content: `Hello! I'm ${res.room.personas?.name || "your AI professor"}${res.room.personas?.subject ? `, specializing in ${res.room.personas.subject}` : ""}. Feel free to ask me anything! I'll adapt my teaching to match your learning style.`,
+          timestamp: new Date(res.room.created_at),
+        },
+      ])
+    } catch (err: any) {
+      setLoadError(err.message || "Room not found")
+    } finally {
+      setIsLoadingRoom(false)
+    }
+  }, [roomId])
+
+  useEffect(() => {
+    if (roomId) loadRoom()
+  }, [roomId, loadRoom])
+
+  useEffect(() => {
+    if (!room || !isLoggedIn) return
+
+    let mounted = true
+
+    const setupRealtime = async () => {
+      try {
+        await subscribeToRoom(room.id)
+
+        const handleNewMessage = (payload: any) => {
+          if (!mounted) return
+          if (payload.sender_type === "agent") {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: payload.message_id || Date.now().toString(),
+                sender: "ai",
+                content: payload.content,
+                timestamp: new Date(),
+                sources: payload.metadata?.sources,
+              },
+            ])
+          }
+        }
+
+        const handlePresence = (payload: any) => {
+          if (!mounted) return
+          const eventType = payload.user_id ? "joined" : "left"
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `presence-${Date.now()}`,
+              sender: "system",
+              content: `A participant ${eventType} the room`,
+              timestamp: new Date(),
+            },
+          ])
+        }
+
+        onRoomMessage("new_message", handleNewMessage)
+        onRoomMessage("user_joined", handlePresence)
+        onRoomMessage("user_left", handlePresence)
+      } catch {
+        // Realtime is best-effort
+      }
+    }
+
+    setupRealtime()
+
+    return () => {
+      mounted = false
+      disconnectRealtime()
+    }
+  }, [room, isLoggedIn])
+
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(roomCode)
+    if (!room) return
+    navigator.clipboard.writeText(room.room_code)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
-  
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return
-    
-    const userMessage: Message = {
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !room || isSending) return
+
+    const userMsg: Message = {
       id: Date.now().toString(),
       sender: "user",
       content: newMessage,
-      timestamp: new Date()
+      timestamp: new Date(),
     }
-    
-    setMessages(prev => [...prev, userMessage])
+
+    setMessages((prev) => [...prev, userMsg])
+    const msgText = newMessage
     setNewMessage("")
-    
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: "ai",
-        content: "That's a great point! Let me elaborate on that concept and provide some examples that might help clarify things further.",
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, aiMessage])
-    }, 1500)
+    setIsSending(true)
+
+    try {
+      const res = await apiSendMessage(room.id, msgText)
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          sender: "ai",
+          content: res.response,
+          timestamp: new Date(),
+          sources: res.sources,
+          rewardGranted: res.reward_granted,
+        },
+      ])
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          sender: "system",
+          content: "Failed to get a response. Please try again.",
+          timestamp: new Date(),
+        },
+      ])
+    } finally {
+      setIsSending(false)
+    }
   }
-  
-  const handleReaction = (reaction: string) => {
+
+  const handleReaction = async (reaction: string) => {
+    if (!room) return
     setActiveReaction(reaction)
+
+    if (reaction === "understood" && room.personas?.id) {
+      try {
+        await recordReward({
+          room_id: room.id,
+          persona_id: room.personas.id,
+          topic: room.personas.subject || "General",
+        })
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `reward-${Date.now()}`,
+            sender: "system",
+            content: "You marked this topic as understood! Reward granted to the tutor.",
+            timestamp: new Date(),
+          },
+        ])
+      } catch {
+        // Best-effort
+      }
+    }
+
+    if (reaction === "confused") {
+      const confusedMsg = "I'm confused, can you explain that differently? Maybe with a simpler example?"
+      setNewMessage("")
+      setIsSending(true)
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          sender: "user",
+          content: confusedMsg,
+          timestamp: new Date(),
+        },
+      ])
+
+      try {
+        const res = await apiSendMessage(room.id, confusedMsg)
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            sender: "ai",
+            content: res.response,
+            timestamp: new Date(),
+            sources: res.sources,
+          },
+        ])
+      } catch {
+        // Best-effort
+      } finally {
+        setIsSending(false)
+      }
+    }
+
     setTimeout(() => setActiveReaction(null), 2000)
   }
-  
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+  const handleLeaveRoom = async () => {
+    if (!room) return
+    try {
+      await leaveRoom(room.id)
+    } catch {
+      // Best-effort
+    }
+    router.push("/rooms")
   }
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  }
+
+  if (isLoadingRoom) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-accent" />
+          <p className="text-lg font-medium text-foreground">Loading classroom...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (loadError || !room) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <p className="mb-4 text-lg font-medium text-foreground">
+            {loadError || "Room not found"}
+          </p>
+          <Button asChild className="rounded-full">
+            <Link href="/rooms">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Rooms
+            </Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const persona = room.personas
+  const roomCode = room.room_code
+
+  const renderMessage = (message: Message, i: number) => (
+    <motion.div
+      key={message.id}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: i < 5 ? i * 0.05 : 0 }}
+    >
+      {message.sender === "system" ? (
+        <div className="text-center text-xs text-muted-foreground">{message.content}</div>
+      ) : (
+        <div className={cn("flex gap-2", message.sender === "user" && "flex-row-reverse")}>
+          <div
+            className={cn(
+              "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold",
+              message.sender === "ai"
+                ? "bg-accent text-accent-foreground"
+                : "bg-foreground text-card"
+            )}
+          >
+            {message.sender === "ai" ? "AI" : (user?.name?.[0]?.toUpperCase() || "Y")}
+          </div>
+          <div>
+            <div
+              className={cn(
+                "max-w-[220px] rounded-2xl px-4 py-2",
+                message.sender === "ai"
+                  ? "rounded-tl-sm bg-muted text-foreground"
+                  : "rounded-tr-sm bg-foreground text-card"
+              )}
+            >
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              <span
+                className={cn(
+                  "mt-1 block text-xs",
+                  message.sender === "ai" ? "text-muted-foreground" : "text-card/70"
+                )}
+              >
+                {formatTime(message.timestamp)}
+              </span>
+            </div>
+            {message.sources && message.sources.length > 0 && (
+              <div className="mt-1 space-y-0.5">
+                {message.sources.map((src, j) => (
+                  <a
+                    key={j}
+                    href={src.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs text-accent hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    {src.title}
+                  </a>
+                ))}
+              </div>
+            )}
+            {message.rewardGranted && (
+              <p className="mt-1 text-xs text-green-500">
+                Understanding detected — reward granted!
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </motion.div>
+  )
 
   return (
     <div className="flex h-screen bg-background">
@@ -135,24 +394,26 @@ export default function RoomPage() {
         animate={{ x: 0, opacity: 1 }}
         className="hidden w-72 flex-shrink-0 border-r border-border bg-card p-6 lg:block"
       >
-        <Link 
+        <Link
           href="/rooms"
-          className="mb-8 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="mb-8 flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Rooms
         </Link>
-        
+
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-foreground">{room.name}</h2>
-          <p className="mt-1 text-muted-foreground">{room.tutorName}</p>
+          <h2 className="text-xl font-bold text-foreground">
+            {persona?.name || "AI Tutor"}
+          </h2>
+          <p className="mt-1 text-muted-foreground">{persona?.subject || "General"}</p>
         </div>
-        
+
         <div className="mb-8 rounded-2xl bg-muted p-4">
           <p className="mb-2 text-xs font-medium text-muted-foreground">Room Code</p>
-          <button 
+          <button
             onClick={handleCopyCode}
-            className="flex w-full items-center justify-between rounded-xl bg-card px-4 py-3 text-sm font-mono font-bold text-foreground transition-all hover:shadow-md"
+            className="flex w-full items-center justify-between rounded-xl bg-card px-4 py-3 font-mono text-sm font-bold text-foreground transition-all hover:shadow-md"
           >
             {roomCode}
             {copied ? (
@@ -162,84 +423,97 @@ export default function RoomPage() {
             )}
           </button>
         </div>
-        
+
         <div>
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-semibold text-foreground">Participants</h3>
             <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
-              {participants.length}
+              {members.length}
             </span>
           </div>
-          
+
           <div className="space-y-2">
-            {participants.map((participant, i) => (
-              <motion.div 
-                key={participant.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-muted"
-              >
-                <div className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold",
-                  participant.isYou 
-                    ? "bg-foreground text-card" 
-                    : "bg-muted text-foreground"
-                )}>
-                  {participant.avatar}
-                </div>
-                <span className="font-medium text-foreground">
-                  {participant.name}
-                  {participant.isYou && (
-                    <span className="ml-1 text-sm text-muted-foreground">(you)</span>
-                  )}
-                </span>
-              </motion.div>
-            ))}
+            {members.map((member, i) => {
+              const isYou = member.user_id === user?.id
+              return (
+                <motion.div
+                  key={member.user_id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-muted"
+                >
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold",
+                      isYou ? "bg-foreground text-card" : "bg-muted text-foreground"
+                    )}
+                  >
+                    {member.display_name?.[0]?.toUpperCase() || member.role[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">
+                      {isYou ? "You" : (member.display_name || member.role)}
+                    </span>
+                    <p className="text-xs capitalize text-muted-foreground">{member.role}</p>
+                  </div>
+                </motion.div>
+              )
+            })}
           </div>
         </div>
+
+        <Button
+          variant="outline"
+          className="mt-8 w-full gap-2 rounded-full text-destructive hover:bg-destructive/10"
+          onClick={handleLeaveRoom}
+        >
+          <LogOut className="h-4 w-4" />
+          Leave Room
+        </Button>
       </motion.aside>
-      
+
       {/* Main Content */}
       <main className="flex flex-1 flex-col">
-        {/* Top Bar */}
         <motion.header
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           className="flex items-center justify-between border-b border-border bg-card px-6 py-4"
         >
           <div className="flex items-center gap-4">
-            <Link 
+            <Link
               href="/rooms"
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors lg:hidden"
+              className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground lg:hidden"
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-bold text-foreground">{room.topic}</h1>
+                <h1 className="font-bold text-foreground">
+                  {persona?.subject || "Classroom"}
+                </h1>
                 <motion.span
                   animate={{ scale: [1, 1.2, 1] }}
                   transition={{ repeat: Infinity, duration: 2 }}
                   className="flex h-2 w-2 rounded-full bg-green-500"
                 />
               </div>
-              <p className="text-sm text-muted-foreground">{room.tutorName}</p>
+              <p className="text-sm text-muted-foreground">{persona?.name || "AI Tutor"}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               className="gap-2 rounded-full lg:hidden"
               onClick={() => setShowParticipants(true)}
             >
               <Users className="h-4 w-4" />
-              {participants.length}
+              {members.length}
             </Button>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               className="gap-2 rounded-full lg:hidden"
               onClick={() => setShowChat(true)}
@@ -251,8 +525,7 @@ export default function RoomPage() {
             </Button>
           </div>
         </motion.header>
-        
-        {/* Classroom Content Area */}
+
         <div className="flex flex-1 overflow-hidden">
           {/* Content Area */}
           <div className="flex flex-1 flex-col items-center justify-center bg-muted/30 p-8">
@@ -271,11 +544,21 @@ export default function RoomPage() {
                 </motion.div>
                 <p className="text-2xl font-bold text-foreground">Interactive Content Area</p>
                 <p className="mt-2 text-muted-foreground">
-                  Presentations, 3D models, and visual aids appear here
+                  3D models, VAPI interactions, and visual aids will appear here
                 </p>
+                {isSending && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mt-4 flex items-center justify-center gap-2 text-sm text-accent"
+                  >
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    AI is thinking...
+                  </motion.div>
+                )}
               </div>
             </motion.div>
-            
+
             {/* Reaction Buttons */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
@@ -286,7 +569,7 @@ export default function RoomPage() {
               {[
                 { id: "hand", icon: Hand, label: "Raise Hand", color: "text-amber-500" },
                 { id: "confused", icon: HelpCircle, label: "Confused", color: "text-orange-500" },
-                { id: "understood", icon: ThumbsUp, label: "Got it!", color: "text-green-500" }
+                { id: "understood", icon: ThumbsUp, label: "Got it!", color: "text-green-500" },
               ].map((reaction) => (
                 <motion.div key={reaction.id} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button
@@ -296,18 +579,21 @@ export default function RoomPage() {
                       activeReaction === reaction.id && "bg-foreground text-card"
                     )}
                     onClick={() => handleReaction(reaction.id)}
+                    disabled={isSending}
                   >
-                    <reaction.icon className={cn(
-                      "h-4 w-4",
-                      activeReaction !== reaction.id && reaction.color
-                    )} />
+                    <reaction.icon
+                      className={cn(
+                        "h-4 w-4",
+                        activeReaction !== reaction.id && reaction.color
+                      )}
+                    />
                     {reaction.label}
                   </Button>
                 </motion.div>
               ))}
             </motion.div>
           </div>
-          
+
           {/* Chat Panel (Desktop) */}
           <motion.aside
             initial={{ x: 20, opacity: 0 }}
@@ -317,57 +603,33 @@ export default function RoomPage() {
             <div className="border-b border-border p-4">
               <h3 className="font-bold text-foreground">Chat</h3>
             </div>
-            
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((message, i) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                >
-                  {message.sender === "system" ? (
-                    <div className="text-center text-xs text-muted-foreground">
-                      {message.content}
-                    </div>
-                  ) : (
-                    <div className={cn(
-                      "flex gap-2",
-                      message.sender === "user" && "flex-row-reverse"
-                    )}>
-                      <div className={cn(
-                        "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold",
-                        message.sender === "ai" 
-                          ? "bg-accent text-accent-foreground" 
-                          : "bg-foreground text-card"
-                      )}>
-                        {message.sender === "ai" ? "AI" : "Y"}
-                      </div>
-                      <div className={cn(
-                        "max-w-[200px] rounded-2xl px-4 py-2",
-                        message.sender === "ai" 
-                          ? "bg-muted text-foreground rounded-tl-sm" 
-                          : "bg-foreground text-card rounded-tr-sm"
-                      )}>
-                        <p className="text-sm">{message.content}</p>
-                        <span className={cn(
-                          "mt-1 block text-xs",
-                          message.sender === "ai" 
-                            ? "text-muted-foreground" 
-                            : "text-card/70"
-                        )}>
-                          {formatTime(message.timestamp)}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
+
+            <div className="flex-1 space-y-4 overflow-y-auto p-4">
+              {messages.map((message, i) => renderMessage(message, i))}
+              {isSending && (
+                <div className="flex gap-2">
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
+                    AI
+                  </div>
+                  <div className="rounded-2xl rounded-tl-sm bg-muted px-4 py-3">
+                    <motion.div className="flex gap-1">
+                      {[0, 1, 2].map((i) => (
+                        <motion.div
+                          key={i}
+                          className="h-2 w-2 rounded-full bg-muted-foreground/50"
+                          animate={{ y: [0, -6, 0] }}
+                          transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.15 }}
+                        />
+                      ))}
+                    </motion.div>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
-            
+
             <div className="border-t border-border p-4">
-              <form 
+              <form
                 onSubmit={(e) => {
                   e.preventDefault()
                   handleSendMessage()
@@ -378,22 +640,27 @@ export default function RoomPage() {
                   placeholder="Type a message..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  className="h-12 rounded-full bg-muted/50 border-0"
+                  className="h-12 rounded-full border-0 bg-muted/50"
+                  disabled={isSending}
                 />
-                <Button 
-                  type="submit" 
-                  size="icon" 
+                <Button
+                  type="submit"
+                  size="icon"
                   className="h-12 w-12 rounded-full"
-                  disabled={!newMessage.trim()}
+                  disabled={!newMessage.trim() || isSending}
                 >
-                  <Send className="h-4 w-4" />
+                  {isSending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                 </Button>
               </form>
             </div>
           </motion.aside>
         </div>
       </main>
-      
+
       {/* Mobile Chat Drawer */}
       <AnimatePresence>
         {showChat && (
@@ -414,47 +681,23 @@ export default function RoomPage() {
             >
               <div className="flex items-center justify-between border-b border-border p-4">
                 <h3 className="font-bold text-foreground">Chat</h3>
-                <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setShowChat(false)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full"
+                  onClick={() => setShowChat(false)}
+                >
                   <X className="h-5 w-5" />
                 </Button>
               </div>
-              
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((message) => (
-                  <div key={message.id}>
-                    {message.sender === "system" ? (
-                      <div className="text-center text-xs text-muted-foreground">
-                        {message.content}
-                      </div>
-                    ) : (
-                      <div className={cn(
-                        "flex gap-2",
-                        message.sender === "user" && "flex-row-reverse"
-                      )}>
-                        <div className={cn(
-                          "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold",
-                          message.sender === "ai" 
-                            ? "bg-accent text-accent-foreground" 
-                            : "bg-foreground text-card"
-                        )}>
-                          {message.sender === "ai" ? "AI" : "Y"}
-                        </div>
-                        <div className={cn(
-                          "max-w-[220px] rounded-2xl px-4 py-2",
-                          message.sender === "ai" 
-                            ? "bg-muted text-foreground rounded-tl-sm" 
-                            : "bg-foreground text-card rounded-tr-sm"
-                        )}>
-                          <p className="text-sm">{message.content}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+
+              <div className="flex-1 space-y-4 overflow-y-auto p-4">
+                {messages.map((message, i) => renderMessage(message, i))}
+                <div ref={messagesEndRef} />
               </div>
-              
+
               <div className="border-t border-border p-4">
-                <form 
+                <form
                   onSubmit={(e) => {
                     e.preventDefault()
                     handleSendMessage()
@@ -465,15 +708,20 @@ export default function RoomPage() {
                     placeholder="Type a message..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="h-12 rounded-full bg-muted/50 border-0"
+                    className="h-12 rounded-full border-0 bg-muted/50"
+                    disabled={isSending}
                   />
-                  <Button 
-                    type="submit" 
-                    size="icon" 
+                  <Button
+                    type="submit"
+                    size="icon"
                     className="h-12 w-12 rounded-full"
-                    disabled={!newMessage.trim()}
+                    disabled={!newMessage.trim() || isSending}
                   >
-                    <Send className="h-4 w-4" />
+                    {isSending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
                   </Button>
                 </form>
               </div>
