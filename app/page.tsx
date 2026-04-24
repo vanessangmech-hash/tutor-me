@@ -498,10 +498,13 @@ function TestimonialSection() {
           initial={{ opacity: 0, scale: 0 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          transition={{ delay: avatar.delay, duration: 0.5, type: "spring" }}
           animate={{ y: [0, -8, 0] }}
-          //@ts-expect-error - framer-motion types
-          transition={{ y: { repeat: Infinity, duration: 3 + i * 0.3, ease: "easeInOut" }}}
+          transition={{
+            delay: avatar.delay,
+            duration: 0.5,
+            type: "spring",
+            y: { repeat: Infinity, duration: 3 + i * 0.3, ease: "easeInOut" },
+          }}
         >
           <Image
             src={avatar.image}

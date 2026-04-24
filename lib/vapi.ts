@@ -135,7 +135,6 @@ export function createVapiClient(publicKey: string): VapiClient {
   // the assistant track and never signal the local user.
   vapi.on("volume-level", (level: number) => emit({ type: "volume", level }));
   vapi.on("error", (error: unknown) => {
-    // eslint-disable-next-line no-console
     console.error("[vapi] error", error);
     emit({ type: "error", error });
   });
@@ -241,7 +240,6 @@ export function createVapiClient(publicKey: string): VapiClient {
         };
         const requested = (s?.audio?.processor?.type ?? "").toLowerCase();
         if (requested && requested !== "none") {
-          // eslint-disable-next-line no-console
           console.log(
             `[vapi] intercepted Daily processor="${requested}" -> "none"`,
           );
@@ -288,10 +286,8 @@ export function createVapiClient(publicKey: string): VapiClient {
       }
 
       patchedCalls.add(call);
-      // eslint-disable-next-line no-console
       console.log("[vapi] patched Daily updateInputSettings (Krisp guard)");
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.warn("[vapi] could not patch Daily call object:", err);
     }
   };
@@ -375,7 +371,6 @@ export function createVapiClient(publicKey: string): VapiClient {
 
       // Helpful one-liner when VAPI rejects the payload — without this
       // the SDK only surfaces the error message, not what we sent.
-      // eslint-disable-next-line no-console
       console.log("[vapi] starting call with", {
         name: assistant.name,
         model: assistant.model.provider + "/" + assistant.model.model,
@@ -411,7 +406,6 @@ export function createVapiClient(publicKey: string): VapiClient {
           typeof getter === "function" ? getter.call(vapi) : null;
         if (call?.setLocalAudio) {
           call.setLocalAudio(true);
-          // eslint-disable-next-line no-console
           console.log(
             "[vapi] ensured local audio enabled (localAudio=",
             call.localAudio?.(),
@@ -419,7 +413,6 @@ export function createVapiClient(publicKey: string): VapiClient {
           );
         }
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.warn("[vapi] could not enable local audio:", err);
       }
     },
@@ -453,7 +446,6 @@ export function createVapiClient(publicKey: string): VapiClient {
         });
         return true;
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.warn("[vapi] sendUserText failed:", err);
         return false;
       }

@@ -256,7 +256,6 @@ export function createMockNetwork(opts?: {
     },
 
     sendReward(amount, reason) {
-      // eslint-disable-next-line no-console
       console.log("[mockNetwork] reward", amount, reason);
     },
 
