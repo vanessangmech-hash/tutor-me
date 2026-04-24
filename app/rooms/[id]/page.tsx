@@ -145,9 +145,9 @@ export default function RoomPage() {
           ])
         }
 
-        onRoomMessage("new_message", handleNewMessage)
-        onRoomMessage("user_joined", handlePresence)
-        onRoomMessage("user_left", handlePresence)
+        await onRoomMessage("new_message", handleNewMessage)
+        await onRoomMessage("user_joined", handlePresence)
+        await onRoomMessage("user_left", handlePresence)
       } catch {
         // Realtime is best-effort
       }

@@ -1,0 +1,39 @@
+{
+  "mcpServers": {
+    "cosmo": {
+      "command": "npx wgc",
+      "args": [
+        "mcp"
+      ],
+      "env": {
+        "COSMO_API_KEY": "cosmo_6466d412e8b8ed2633ca9706e5f89f88"
+      }
+    },
+    "insforge": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@insforge/mcp@latest"
+      ],
+      "env": {
+        "API_KEY": "ik_efa77753cb43088d730164bc526f0ac5",
+        "API_BASE_URL": "https://e64sbexr.us-west.insforge.app/"
+      }
+    },
+    "ghost": {
+      "command": "C:\\Users\\rahul\\AppData\\Local\\Programs\\Ghost\\ghost.exe",
+      "args": [
+        "mcp",
+        "start"
+      ]
+    },
+    "agent-tinyfish-ai": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@latest",
+        "https://agent.tinyfish.ai/mcp"
+      ]
+    }
+  }
+}

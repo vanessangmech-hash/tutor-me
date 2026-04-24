@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react"
-import { insforge } from "@/lib/insforge"
+import { resetRealtimeClient } from "@/lib/insforge"
 
 export type UserPlan = "free" | "student" | "professional"
 
@@ -29,9 +29,28 @@ function mapInsforgeUser(insforgeUser: any, plan?: UserPlan): User {
     id: insforgeUser.id,
     name: insforgeUser.profile?.name || insforgeUser.email?.split("@")[0] || "User",
     email: insforgeUser.email,
-    avatar: insforgeUser.profile?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(insforgeUser.profile?.name || insforgeUser.email)}`,
+    avatar:
+      insforgeUser.profile?.avatar_url ||
+      `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+        insforgeUser.profile?.name || insforgeUser.email
+      )}`,
     plan: (insforgeUser.metadata?.plan as UserPlan) || plan || "free",
   }
+}
+
+async function apiCall(path: string, opts: RequestInit = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: {
+      "Content-Type": "application/json",
+      ...(opts.headers || {}),
+    },
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(data?.error || "Request failed")
+  }
+  return data
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -40,8 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadCurrentUser = useCallback(async () => {
     try {
-      const { data, error } = await insforge.auth.getCurrentUser()
-      if (!error && data?.user) {
+      const data = await apiCall("/api/auth/me", { method: "GET" })
+      if (data?.user) {
         setUser(mapInsforgeUser(data.user))
       } else {
         setUser(null)
@@ -58,29 +77,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadCurrentUser])
 
   const login = async (email: string, password: string) => {
-    const { data, error } = await insforge.auth.signInWithPassword({ email, password })
-    if (error) throw new Error(error.message || "Login failed")
+    const data = await apiCall("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    })
     if (data?.user) {
       setUser(mapInsforgeUser(data.user))
     }
   }
 
   const signup = async (name: string, email: string, password: string, plan: UserPlan) => {
-    const { data, error } = await insforge.auth.signUp({ email, password, name })
-    if (error) throw new Error(error.message || "Signup failed")
+    const data = await apiCall("/api/auth/signup", {
+      method: "POST",
+      body: JSON.stringify({ name, email, password, plan }),
+    })
 
     if (data?.requireEmailVerification) {
       throw new Error("Please check your email to verify your account before signing in.")
     }
 
     if (data?.user) {
-      await insforge.auth.setProfile({ name, plan })
       setUser(mapInsforgeUser(data.user, plan))
     }
   }
 
   const logout = async () => {
-    await insforge.auth.signOut()
+    try {
+      await apiCall("/api/auth/logout", { method: "POST" })
+    } catch {
+      /* ignore */
+    }
+    resetRealtimeClient()
     setUser(null)
   }
 

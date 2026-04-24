@@ -1,4 +1,4 @@
-import { insforge } from "@/lib/insforge"
+import { getRealtimeClient, resetRealtimeClient } from "@/lib/insforge"
 
 // ── Types ──
 
@@ -52,6 +52,26 @@ export interface RewardResponse {
   message: string
 }
 
+// ── Internal: API route fetch helper ──
+
+async function callFunction<T = any>(
+  fn: string,
+  opts: { method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE"; body?: any; query?: Record<string, string> } = {}
+): Promise<T> {
+  const { method = "GET", body, query } = opts
+  const qs = query ? `?${new URLSearchParams(query).toString()}` : ""
+  const res = await fetch(`/api/functions/${fn}${qs}`, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(data?.error || `Request failed: ${res.status}`)
+  }
+  return data as T
+}
+
 // ── Room Management ──
 
 export async function createRoom(
@@ -59,7 +79,7 @@ export async function createRoom(
   maxParticipants = 30,
   settings?: Record<string, any>
 ) {
-  const { data, error } = await insforge.functions.invoke("room-manager", {
+  return callFunction<{ room: Room }>("room-manager", {
     method: "POST",
     body: {
       persona_id: personaId,
@@ -67,58 +87,44 @@ export async function createRoom(
       settings: settings || { allow_voice: true, allow_chat: true, auto_reward: true },
     },
   })
-  if (error) throw new Error(error.message || "Failed to create room")
-  return data as { room: Room }
 }
 
 export async function getRoom(opts: { code?: string; id?: string }) {
-  const params = new URLSearchParams()
-  if (opts.code) params.set("code", opts.code)
-  else if (opts.id) params.set("id", opts.id)
+  const query: Record<string, string> = {}
+  if (opts.code) query.code = opts.code
+  else if (opts.id) query.id = opts.id
 
-  const { data, error } = await insforge.functions.invoke(
-    `room-manager?${params.toString()}`,
-    { method: "GET" }
-  )
-  if (error) throw new Error(error.message || "Failed to get room")
-  return data as { room: Room; members: RoomMember[] }
+  return callFunction<{ room: Room; members: RoomMember[] }>("room-manager", {
+    method: "GET",
+    query,
+  })
 }
 
 export async function listMyRooms() {
-  const { data, error } = await insforge.functions.invoke("room-manager", {
-    method: "GET",
-  })
-  if (error) throw new Error(error.message || "Failed to list rooms")
-  return data as { rooms: Room[] }
+  return callFunction<{ rooms: Room[] }>("room-manager", { method: "GET" })
 }
 
 export async function listActiveRooms() {
-  const { data, error } = await insforge.functions.invoke(
-    "room-manager?list_active=true",
-    { method: "GET" }
-  )
-  if (error) throw new Error(error.message || "Failed to list active rooms")
-  return data as { rooms: Room[] }
+  return callFunction<{ rooms: Room[] }>("room-manager", {
+    method: "GET",
+    query: { list_active: "true" },
+  })
 }
 
 // ── Room Join/Leave ──
 
 export async function joinRoom(roomCode: string) {
-  const { data, error } = await insforge.functions.invoke("room-join", {
+  return callFunction<{ message: string; room: Room }>("room-join", {
     method: "POST",
     body: { room_code: roomCode.toUpperCase() },
   })
-  if (error) throw new Error(error.message || "Failed to join room")
-  return data as { message: string; room: Room }
 }
 
 export async function leaveRoom(roomId: string) {
-  const { data, error } = await insforge.functions.invoke("room-join", {
+  return callFunction<{ message: string }>("room-join", {
     method: "DELETE",
     body: { room_id: roomId },
   })
-  if (error) throw new Error(error.message || "Failed to leave room")
-  return data as { message: string }
 }
 
 // ── Persona Management ──
@@ -131,53 +137,42 @@ export async function createPersona(opts: {
   teaching_style?: Record<string, any>
   is_public?: boolean
 }) {
-  const { data, error } = await insforge.functions.invoke("persona-manager", {
+  return callFunction<{ persona: Persona }>("persona-manager", {
     method: "POST",
     body: opts,
   })
-  if (error) throw new Error(error.message || "Failed to create persona")
-  return data as { persona: Persona }
 }
 
 export async function listPublicPersonas(subject?: string) {
-  const params = new URLSearchParams({ public: "true" })
-  if (subject) params.set("subject", subject)
-
-  const { data, error } = await insforge.functions.invoke(
-    `persona-manager?${params.toString()}`,
-    { method: "GET" }
-  )
-  if (error) throw new Error(error.message || "Failed to list personas")
-  return data as { personas: Persona[] }
+  const query: Record<string, string> = { public: "true" }
+  if (subject) query.subject = subject
+  return callFunction<{ personas: Persona[] }>("persona-manager", {
+    method: "GET",
+    query,
+  })
 }
 
 export async function getPersona(personaId: string) {
-  const { data, error } = await insforge.functions.invoke(
-    `persona-manager?id=${personaId}`,
-    { method: "GET" }
-  )
-  if (error) throw new Error(error.message || "Failed to get persona")
-  return data as { persona: Persona }
+  return callFunction<{ persona: Persona }>("persona-manager", {
+    method: "GET",
+    query: { id: personaId },
+  })
 }
 
 export async function forkPersona(personaId: string) {
-  const { data, error } = await insforge.functions.invoke("persona-manager", {
+  return callFunction<{ persona: Persona; forked_from: string }>("persona-manager", {
     method: "PATCH",
     body: { persona_id: personaId },
   })
-  if (error) throw new Error(error.message || "Failed to fork persona")
-  return data as { persona: Persona; forked_from: string }
 }
 
 // ── Chat ──
 
 export async function sendMessage(roomId: string, message: string) {
-  const { data, error } = await insforge.functions.invoke("chat-handler", {
+  return callFunction<ChatResponse>("chat-handler", {
     method: "POST",
     body: { room_id: roomId, message },
   })
-  if (error) throw new Error(error.message || "Failed to send message")
-  return data as ChatResponse
 }
 
 // ── Rewards ──
@@ -189,42 +184,41 @@ export async function recordReward(opts: {
   understanding_score?: number
   message?: string
 }) {
-  const { data, error } = await insforge.functions.invoke("reward-handler", {
+  return callFunction<RewardResponse>("reward-handler", {
     method: "POST",
     body: { understanding_score: 1.0, ...opts },
   })
-  if (error) throw new Error(error.message || "Failed to record reward")
-  return data as RewardResponse
 }
 
 // ── Learning Adapter ──
 
 export async function analyzeLearning(personaId: string) {
-  const { data, error } = await insforge.functions.invoke("learning-adapter", {
+  return callFunction("learning-adapter", {
     method: "POST",
     body: { persona_id: personaId },
   })
-  if (error) throw new Error(error.message || "Failed to analyze learning")
-  return data
 }
 
 // ── Realtime Helpers ──
 
 export async function subscribeToRoom(roomId: string) {
-  await insforge.realtime.connect()
-  const roomSub = await insforge.realtime.subscribe(`room:${roomId}`)
-  const presenceSub = await insforge.realtime.subscribe(`presence:${roomId}`)
+  const client = await getRealtimeClient()
+  await client.realtime.connect()
+  const roomSub = await client.realtime.subscribe(`room:${roomId}`)
+  const presenceSub = await client.realtime.subscribe(`presence:${roomId}`)
   return { roomSub, presenceSub }
 }
 
-export function onRoomMessage(event: string, callback: (payload: any) => void) {
-  insforge.realtime.on(event, callback)
+export async function onRoomMessage(event: string, callback: (payload: any) => void) {
+  const client = await getRealtimeClient()
+  client.realtime.on(event, callback)
 }
 
-export function offRoomMessage(event: string, callback: (payload: any) => void) {
-  insforge.realtime.off(event, callback)
+export async function offRoomMessage(event: string, callback: (payload: any) => void) {
+  const client = await getRealtimeClient()
+  client.realtime.off(event, callback)
 }
 
 export function disconnectRealtime() {
-  insforge.realtime.disconnect()
+  resetRealtimeClient()
 }

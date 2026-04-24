@@ -1,11 +1,34 @@
+"use client"
+
 import { createClient } from '@insforge/sdk'
 
-const INSFORGE_BASE_URL = 'https://e64sbexr.us-west.insforge.app'
-const INSFORGE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjkxNjl9.QePyO2tYBTpI0jxhuhLbkkNUKj-7GsbYNRDWfhfaybQ'
+let realtimeClient: ReturnType<typeof createClient> | null = null
 
-export const insforge = createClient({
-  baseUrl: INSFORGE_BASE_URL,
-  anonKey: INSFORGE_ANON_KEY,
-})
+export async function getRealtimeClient() {
+  if (realtimeClient) return realtimeClient
 
-export { INSFORGE_BASE_URL, INSFORGE_ANON_KEY }
+  const res = await fetch('/api/realtime/config')
+  if (!res.ok) {
+    throw new Error('Failed to get realtime config — must be authenticated')
+  }
+  const { baseUrl, anonKey, accessToken } = await res.json()
+
+  realtimeClient = createClient({
+    baseUrl,
+    anonKey,
+    ...(accessToken ? { edgeFunctionToken: accessToken } : {}),
+  })
+
+  return realtimeClient
+}
+
+export function resetRealtimeClient() {
+  if (realtimeClient) {
+    try {
+      realtimeClient.realtime.disconnect()
+    } catch {
+      /* ignore */
+    }
+  }
+  realtimeClient = null
+}
