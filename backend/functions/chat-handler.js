@@ -197,13 +197,21 @@ export default async function (req) {
   aiMessages.push({ role: 'user', content: message });
 
   // Call AI
-  const completion = await insforge.ai.chat.completions.create({
-    model: 'openai/gpt-4o',
-    messages: aiMessages,
-    temperature: 0.7,
-    maxTokens: 1024,
+  const response = await fetch('https://api.akashml.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${Deno.env.get('AKASHML_API_KEY')}`
+    },
+    body: JSON.stringify({
+      model: 'meta-llama/llama-3.3-70b-instruct',
+      messages: aiMessages,
+      temperature: 0.7,
+      max_tokens: 1024
+    })
   });
 
+  const completion = await response.json();
   const aiResponse = completion.choices[0]?.message?.content || 'I apologize, I had trouble formulating a response.';
 
   // Store user message
@@ -234,31 +242,40 @@ export default async function (req) {
 
   let summary = existingContext?.summary || '';
   if (totalTokens > MAX_TOKEN_ESTIMATE) {
-    const summarizeResp = await insforge.ai.chat.completions.create({
-      model: 'openai/gpt-4o',
-      messages: [
-        { role: 'system', content: 'Summarize this conversation in 2-3 sentences, focusing on topics discussed and student understanding.' },
-        { role: 'user', content: contextMessages.map((m) => `${m.role}: ${m.content}`).join('\n') },
-      ],
-      maxTokens: 200,
+    const response = await fetch('https://api.akashml.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('AKASHML_API_KEY')}`
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-3.3-70b-instruct',
+        messages: [
+          { role: 'system', content: 'Summarize this conversation in 2-3 sentences, focusing on topics discussed and student understanding.' },
+          { role: 'user', content: contextMessages.map((m) => `${m.role}: ${m.content}`).join('\n') },
+        ],
+        max_tokens: 200
+      })
     });
-    summary = summarizeResp.choices[0]?.message?.content || summary;
+    const completion = await response.json();
+    summary = completion.choices[0]?.message?.content || summary;
     contextMessages = contextMessages.slice(-10);
   }
 
   await upsertContext(room_id, contextMessages, summary, totalTokens);
 
+  // TODO: Replace with Akash ML-compatible embedding service (not yet integrated)
   // Generate embedding for the exchange and store
-  try {
-    const embeddingResp = await insforge.ai.embeddings.create({
-      model: 'openai/text-embedding-3-small',
-      input: `Q: ${message}\nA: ${aiResponse}`,
-    });
-    const embedding = embeddingResp.data[0]?.embedding;
-    if (embedding) {
-      await storeEmbedding(persona.id, persona.subject, `Q: ${message}\nA: ${aiResponse}`, embedding, null);
-    }
-  } catch (_) { /* embedding storage is best-effort */ }
+  // try {
+  //   const embeddingResp = await insforge.ai.embeddings.create({
+  //     model: 'openai/text-embedding-3-small',
+  //     input: `Q: ${message}\nA: ${aiResponse}`,
+  //   });
+  //   const embedding = embeddingResp.data[0]?.embedding;
+  //   if (embedding) {
+  //     await storeEmbedding(persona.id, persona.subject, `Q: ${message}\nA: ${aiResponse}`, embedding, null);
+  //   }
+  // } catch (_) { /* embedding storage is best-effort */ }
 
   // Update learning progress interaction count
   if (progress) {
