@@ -21,11 +21,7 @@ import {
   ChevronRight,
   Crown,
   Zap,
-  Check,
-  Plus,
-  Users,
-  Play,
-  ArrowRight
+  Play
 } from "lucide-react"
 
 const recentSessions = [
@@ -207,54 +203,6 @@ export default function ProfilePage() {
               </Button>
             </div>
           </motion.div>
-
-          {/* Quick Actions - Create/Join Room */}
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mb-8"
-          >
-            <div className="grid gap-4 md:grid-cols-2">
-              <motion.div
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Link
-                  href="/rooms?action=create"
-                  className="group flex items-center gap-4 rounded-3xl bg-accent p-6 transition-shadow hover:shadow-lg"
-                >
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-foreground/10">
-                    <Plus className="h-8 w-8 text-accent-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-accent-foreground">Create a Room</h3>
-                    <p className="text-sm text-accent-foreground/70">Start a new study session with AI</p>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-accent-foreground transition-transform group-hover:translate-x-1" />
-                </Link>
-              </motion.div>
-
-              <motion.div
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Link
-                  href="/rooms?action=join"
-                  className="group flex items-center gap-4 rounded-3xl bg-foreground p-6 text-card transition-shadow hover:shadow-lg"
-                >
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-card/10">
-                    <Users className="h-8 w-8 text-card" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold">Join a Room</h3>
-                    <p className="text-sm text-card/70">Enter a room code to join friends</p>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-card transition-transform group-hover:translate-x-1" />
-                </Link>
-              </motion.div>
-            </div>
-          </motion.section>
 
           {/* Recent Sessions with Progress */}
           <motion.section
