@@ -1,0 +1,298 @@
+type Query {
+  """Get room by code or ID"""
+  room(code: String, id: ID): Room
+
+  """List active rooms for the current user"""
+  myRooms: [Room!]!
+
+  """Get a persona by ID"""
+  persona(id: ID!): Persona
+
+  """List public personas, optionally filtered by subject"""
+  publicPersonas(subject: String, limit: Int = 50): [Persona!]!
+
+  """List personas created by the current user"""
+  myPersonas: [Persona!]!
+
+  """Get learning progress for a specific persona"""
+  learningProgress(personaId: ID!): LearningProgress
+}
+
+type Mutation {
+  """Create a new classroom room with a persona"""
+  createRoom(input: CreateRoomInput!): Room!
+
+  """Join a room by its code"""
+  joinRoom(roomCode: String!): JoinRoomResult!
+
+  """Leave a room"""
+  leaveRoom(roomId: ID!): Boolean!
+
+  """Update room settings (host only)"""
+  updateRoom(input: UpdateRoomInput!): Room!
+
+  """Archive a room (host only)"""
+  archiveRoom(roomId: ID!): Room!
+
+  """Create a new AI professor persona"""
+  createPersona(input: CreatePersonaInput!): Persona!
+
+  """Update a persona (creator only)"""
+  updatePersona(input: UpdatePersonaInput!): Persona!
+
+  """Fork a public persona for customization"""
+  forkPersona(personaId: ID!): ForkPersonaResult!
+
+  """Send a message to the AI professor in a room"""
+  sendMessage(input: SendMessageInput!): ChatResponse!
+
+  """Record a reward for understanding"""
+  recordReward(input: RecordRewardInput!): Reward!
+
+  """Analyze and update learning style"""
+  analyzeLearningStyle(personaId: ID!): LearningStyleResult!
+}
+
+type Subscription {
+  """Subscribe to new messages in a room"""
+  roomMessages(roomId: ID!): Message!
+
+  """Subscribe to member join/leave events"""
+  roomPresence(roomId: ID!): PresenceEvent!
+
+  """Subscribe to reward events in a room"""
+  roomRewards(roomId: ID!): Reward!
+}
+
+# ── Types ──
+
+type Room {
+  id: ID!
+  roomCode: String!
+  hostId: String!
+  persona: Persona!
+  status: RoomStatus!
+  maxParticipants: Int!
+  settings: RoomSettings!
+  members: [RoomMember!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Persona {
+  id: ID!
+  creatorId: String!
+  name: String!
+  subject: String!
+  systemPrompt: String!
+  personalityTraits: JSON
+  teachingStyle: TeachingStyle
+  totalRewards: Int!
+  timesUsed: Int!
+  isPublic: Boolean!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type RoomMember {
+  userId: String!
+  role: MemberRole!
+  joinedAt: String!
+  leftAt: String
+}
+
+type Message {
+  id: ID!
+  roomId: ID!
+  senderId: String!
+  senderType: SenderType!
+  content: String!
+  messageType: MessageType!
+  metadata: JSON
+  createdAt: String!
+}
+
+type Reward {
+  id: ID!
+  roomId: ID!
+  userId: String!
+  personaId: ID!
+  topic: String!
+  understandingScore: Float!
+  createdAt: String!
+}
+
+type LearningProgress {
+  id: ID!
+  userId: String!
+  personaId: ID!
+  topicsMastered: [String!]!
+  learningStyle: LearningStyle
+  totalRewards: Int!
+  interactionCount: Int!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type TeachingStyle {
+  approach: String
+  detailLevel: String
+  encouragement: Boolean
+}
+
+type LearningStyle {
+  primary: String!
+  secondary: String
+  preferences: LearningPreferences
+  recommendedApproach: String
+  systemPromptModifier: String
+}
+
+type LearningPreferences {
+  examples: Boolean
+  analogies: Boolean
+  stepByStep: Boolean
+  visualAids: Boolean
+  practiceProblems: Boolean
+  discussion: Boolean
+}
+
+type RoomSettings {
+  allowVoice: Boolean
+  allowChat: Boolean
+  autoReward: Boolean
+}
+
+type ChatResponse {
+  response: String!
+  rewardGranted: Boolean!
+  sources: [ResearchSource!]!
+}
+
+type ResearchSource {
+  url: String!
+  title: String!
+  snippet: String
+}
+
+type JoinRoomResult {
+  message: String!
+  room: Room!
+}
+
+type ForkPersonaResult {
+  persona: Persona!
+  forkedFrom: ID!
+}
+
+type LearningStyleResult {
+  learningStyle: LearningStyle!
+  patterns: InteractionPatterns!
+  message: String!
+}
+
+type InteractionPatterns {
+  avgLength: Int!
+  questionCount: Int!
+  totalMessages: Int!
+  revisitedTopics: [String!]!
+  asksForExamples: Boolean!
+  asksForAnalogies: Boolean!
+  asksForSteps: Boolean!
+  asksForVisuals: Boolean!
+}
+
+type PresenceEvent {
+  userId: String!
+  roomId: ID!
+  event: PresenceEventType!
+  timestamp: String!
+}
+
+# ── Enums ──
+
+enum RoomStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum MemberRole {
+  HOST
+  STUDENT
+}
+
+enum SenderType {
+  USER
+  AGENT
+}
+
+enum MessageType {
+  CHAT
+  QUESTION
+  ANSWER
+  REWARD
+}
+
+enum PresenceEventType {
+  JOINED
+  LEFT
+}
+
+# ── Inputs ──
+
+input CreateRoomInput {
+  personaId: ID!
+  maxParticipants: Int = 30
+  settings: RoomSettingsInput
+}
+
+input UpdateRoomInput {
+  roomId: ID!
+  settings: RoomSettingsInput
+  maxParticipants: Int
+}
+
+input RoomSettingsInput {
+  allowVoice: Boolean
+  allowChat: Boolean
+  autoReward: Boolean
+}
+
+input CreatePersonaInput {
+  name: String!
+  subject: String!
+  systemPrompt: String!
+  personalityTraits: JSON
+  teachingStyle: TeachingStyleInput
+  isPublic: Boolean = false
+}
+
+input UpdatePersonaInput {
+  personaId: ID!
+  name: String
+  subject: String
+  systemPrompt: String
+  personalityTraits: JSON
+  teachingStyle: TeachingStyleInput
+  isPublic: Boolean
+}
+
+input TeachingStyleInput {
+  approach: String
+  detailLevel: String
+  encouragement: Boolean
+}
+
+input SendMessageInput {
+  roomId: ID!
+  message: String!
+}
+
+input RecordRewardInput {
+  roomId: ID!
+  personaId: ID!
+  topic: String!
+  understandingScore: Float = 1.0
+}
+
+scalar JSON
