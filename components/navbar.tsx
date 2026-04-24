@@ -11,6 +11,7 @@ import { useState } from "react"
 
 const navItems = [
   { href: "/tutors", label: "Tutors" },
+  { href: "/create", label: "Create" },
   { href: "/pricing", label: "Pricing" },
   { href: "/about", label: "About" },
 ]

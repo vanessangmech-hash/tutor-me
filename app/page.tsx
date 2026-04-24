@@ -12,55 +12,99 @@ import { useAuth } from "@/lib/auth-context"
 import { tutors } from "@/lib/tutors-data"
 import { ArrowRight, Play, Sparkles, Users, Zap, Target, Star, ChevronRight, MessageCircle, Palette, Brain, Wand2 } from "lucide-react"
 
-// Animated 3D Tutor Character that follows mouse
+// Interactive 3D Bear Tutor Character - draggable to see full body
 function AnimatedTutor() {
   const ref = useRef<HTMLDivElement>(null)
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const [rotation, setRotation] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [isJumping, setIsJumping] = useState(false)
 
+  // Mouse follow for subtle movement when not dragging
   useEffect(() => {
+    if (isDragging) return
+    
     const handleMouseMove = (e: MouseEvent) => {
       if (ref.current) {
         const rect = ref.current.getBoundingClientRect()
         const centerX = rect.left + rect.width / 2
         const centerY = rect.top + rect.height / 2
-        setMousePosition({
-          x: (e.clientX - centerX) / 20,
-          y: (e.clientY - centerY) / 20,
+        setRotation({
+          x: (e.clientY - centerY) / 30,
+          y: -(e.clientX - centerX) / 30,
         })
       }
     }
 
     window.addEventListener("mousemove", handleMouseMove)
     return () => window.removeEventListener("mousemove", handleMouseMove)
-  }, [])
+  }, [isDragging])
+
+  // Drag handlers for interactive rotation
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDragging(true)
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
+    setDragStart({ x: clientX - rotation.y * 2, y: clientY - rotation.x * 2 })
+  }
+
+  const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDragging) return
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
+    setRotation({
+      x: Math.max(-30, Math.min(30, (clientY - dragStart.y) / 2)),
+      y: Math.max(-45, Math.min(45, (clientX - dragStart.x) / 2)),
+    })
+  }
+
+  const handleDragEnd = () => {
+    setIsDragging(false)
+  }
 
   // Random jump animation
   useEffect(() => {
     const jumpInterval = setInterval(() => {
       setIsJumping(true)
       setTimeout(() => setIsJumping(false), 500)
-    }, 4000)
+    }, 5000)
     return () => clearInterval(jumpInterval)
   }, [])
 
   return (
     <motion.div
       ref={ref}
-      className="relative h-[450px] w-[450px] lg:h-[550px] lg:w-[550px]"
+      className="relative h-[450px] w-[450px] cursor-grab active:cursor-grabbing lg:h-[550px] lg:w-[550px]"
+      onMouseDown={handleDragStart}
+      onMouseMove={handleDragMove}
+      onMouseUp={handleDragEnd}
+      onMouseLeave={handleDragEnd}
+      onTouchStart={handleDragStart}
+      onTouchMove={handleDragMove}
+      onTouchEnd={handleDragEnd}
       animate={{
-        rotateX: mousePosition.y,
-        rotateY: -mousePosition.x,
+        rotateX: rotation.x,
+        rotateY: rotation.y,
         y: isJumping ? -30 : 0,
       }}
       transition={{ 
         type: "spring", 
-        stiffness: 100, 
-        damping: 30,
+        stiffness: isDragging ? 300 : 100, 
+        damping: isDragging ? 20 : 30,
         y: { type: "spring", stiffness: 500, damping: 15 }
       }}
       style={{ perspective: 1000, transformStyle: "preserve-3d" }}
     >
+      {/* Drag hint */}
+      <motion.div
+        className="absolute -bottom-8 left-1/2 -translate-x-1/2 rounded-full bg-accent/80 px-3 py-1 text-xs font-medium text-accent-foreground"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isDragging ? 0 : 1 }}
+        transition={{ delay: 2 }}
+      >
+        Drag to rotate me!
+      </motion.div>
+      
       {/* Floating rings around tutor */}
       <motion.div
         className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent/30"
@@ -107,24 +151,24 @@ function AnimatedTutor() {
         <div className="absolute -left-2 top-4 h-4 w-4 rotate-45 bg-card ring-1 ring-border" />
       </motion.div>
 
-      {/* Main 3D cartoon tutor image - pops off the page */}
+      {/* Main 3D Bear Tutor image - full body visible */}
       <motion.div
         className="absolute inset-0"
         animate={{ 
           scale: [1, 1.02, 1],
-          rotateZ: [0, 1, -1, 0]
         }}
         transition={{ 
           repeat: Infinity, 
           duration: 4, 
           ease: "easeInOut" 
         }}
+        style={{ transformStyle: "preserve-3d" }}
       >
         <Image
-          src="/images/3d-tutor.jpg"
-          alt="3D AI Tutor"
+          src="/images/3d-bear-tutor.jpg"
+          alt="3D Bear Tutor"
           fill
-          className="object-contain drop-shadow-2xl"
+          className="pointer-events-none object-contain drop-shadow-2xl"
           style={{ 
             filter: "drop-shadow(0 25px 50px rgba(0,0,0,0.25))",
             transform: "translateZ(50px)"
@@ -358,16 +402,27 @@ function CreateRoomSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.6, duration: 0.5 }}
-          className="mt-12 text-center"
+          className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row"
         >
           <Button
             size="lg"
-            className="gap-2 rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
+            className="gap-2 rounded-full bg-card text-foreground hover:bg-card/90"
             asChild
           >
             <Link href="/create">
               Create a Room
               <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            className="gap-2 rounded-full border-card/30 text-card hover:bg-card/10 hover:text-card"
+            asChild
+          >
+            <Link href="/tutors">
+              Explore Rooms
+              <ChevronRight className="h-4 w-4" />
             </Link>
           </Button>
         </motion.div>
@@ -399,13 +454,14 @@ function TestimonialSection() {
     }
   ]
 
+  // Cartoon subject images for floating bubbles
   const floatingAvatars = [
-    { top: "10%", left: "8%", size: 56, delay: 0 },
-    { top: "20%", left: "20%", size: 44, delay: 0.5 },
-    { top: "12%", right: "15%", size: 52, delay: 0.3 },
-    { top: "25%", right: "8%", size: 40, delay: 0.7 },
-    { bottom: "20%", left: "12%", size: 48, delay: 0.2 },
-    { bottom: "15%", right: "20%", size: 50, delay: 0.6 },
+    { top: "10%", left: "8%", size: 56, delay: 0, image: "/images/testimonial-chemistry.jpg" },
+    { top: "20%", left: "20%", size: 44, delay: 0.5, image: "/images/testimonial-math.jpg" },
+    { top: "12%", right: "15%", size: 52, delay: 0.3, image: "/images/testimonial-study.jpg" },
+    { top: "25%", right: "8%", size: 40, delay: 0.7, image: "/images/testimonial-physics.jpg" },
+    { bottom: "20%", left: "12%", size: 48, delay: 0.2, image: "/images/testimonial-art.jpg" },
+    { bottom: "15%", right: "20%", size: 50, delay: 0.6, image: "/images/testimonial-coding.jpg" },
   ]
 
   return (
@@ -426,11 +482,11 @@ function TestimonialSection() {
         </svg>
       </div>
 
-      {/* Floating avatars */}
+      {/* Floating cartoon subject avatars */}
       {floatingAvatars.map((avatar, i) => (
         <motion.div
           key={i}
-          className="absolute overflow-hidden rounded-full bg-card p-1 shadow-lg ring-2 ring-border/50"
+          className="absolute overflow-hidden rounded-full bg-card p-1 shadow-lg ring-2 ring-accent/30"
           style={{
             top: avatar.top,
             left: avatar.left,
@@ -448,7 +504,7 @@ function TestimonialSection() {
           transition={{ y: { repeat: Infinity, duration: 3 + i * 0.3, ease: "easeInOut" }}}
         >
           <Image
-            src={`https://images.unsplash.com/photo-${1500000000000 + i * 100}?w=100&h=100&fit=crop`}
+            src={avatar.image}
             alt=""
             width={avatar.size}
             height={avatar.size}
@@ -818,6 +874,25 @@ export default function HomePage() {
             Explore tutor rooms, discover new learning styles, and find the perfect AI tutor that matches your energy.
           </motion.p>
 
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="mt-8"
+          >
+            <Button
+              size="lg"
+              variant="outline"
+              className="gap-2 rounded-full"
+              asChild
+            >
+              <Link href="/tutors">
+                Explore Rooms
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </motion.div>
 
         </div>
       </section>
