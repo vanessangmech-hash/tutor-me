@@ -166,7 +166,7 @@ function AnimatedTutor() {
         style={{ transformStyle: "preserve-3d" }}
       >
         <Image
-          src="/images/tutor-me-bear.png"
+          src="/images/tutor-bear-only.jpg"
           alt="Tutor Me Bear"
           width={500}
           height={550}
@@ -575,8 +575,18 @@ function TestimonialSection() {
   )
 }
 
+// AI Tutor characters for the carousel (different from masterpiece gallery)
+const aiTutorCharacters = [
+  { id: "ai-1", name: "Professor Owl", subject: "Mathematics", persona: "Wise & Patient", rating: "4.9", thumbnail: "/images/tutor-math.jpg" },
+  { id: "ai-2", name: "Robo Scientist", subject: "Science", persona: "Curious Explorer", rating: "4.8", thumbnail: "/images/tutor-science.jpg" },
+  { id: "ai-3", name: "Foxy Reader", subject: "English", persona: "Storyteller", rating: "4.9", thumbnail: "/images/tutor-english.jpg" },
+  { id: "ai-4", name: "Turtle Historian", subject: "History", persona: "Time Traveler", rating: "4.7", thumbnail: "/images/tutor-history.jpg" },
+]
+
 // Tutor preview carousel
 function TutorCarousel({ onTutorClick }: { onTutorClick: () => void }) {
+  const allTutors = [...aiTutorCharacters, ...aiTutorCharacters, ...aiTutorCharacters]
+  
   return (
     <section className="overflow-hidden py-20">
       <div className="mx-auto max-w-6xl px-6">
@@ -599,7 +609,7 @@ function TutorCarousel({ onTutorClick }: { onTutorClick: () => void }) {
         animate={{ x: [0, -1200] }}
         transition={{ repeat: Infinity, duration: 40, ease: "linear" }}
       >
-        {[...tutors, ...tutors].map((tutor, i) => (
+        {allTutors.map((tutor, i) => (
           <motion.button
             key={`${tutor.id}-${i}`}
             onClick={onTutorClick}
@@ -753,18 +763,18 @@ export default function HomePage() {
               className="absolute left-0 top-1/3 hidden lg:block"
             >
               <div className="flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  {[1, 2, 3].map((i) => (
-                    <Image
-                      key={i}
-                      src={`https://images.unsplash.com/photo-${1494790108377 + i * 10000}?w=40&h=40&fit=crop`}
-                      alt=""
-                      width={40}
-                      height={40}
-                      className="rounded-full ring-2 ring-card"
-                    />
-                  ))}
-                </div>
+                <motion.div 
+                  className="relative h-16 w-16 overflow-hidden rounded-2xl shadow-lg"
+                  animate={{ y: [0, -5, 0] }}
+                  transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                >
+                  <Image
+                    src="/images/happy-students.jpg"
+                    alt="Happy students"
+                    fill
+                    className="object-cover"
+                  />
+                </motion.div>
                 <div>
                   <p className="text-2xl font-bold">
                     <AnimatedCounter value={2} suffix="M+" />
@@ -861,8 +871,8 @@ export default function HomePage() {
             transition={{ delay: 0.1 }}
             className="mt-6 text-4xl font-bold tracking-tight text-foreground lg:text-6xl"
           >
-            A place to display your{" "}
-            <span className="italic">masterpiece.</span>
+            Find the{" "}
+            <span className="italic">best tutor.</span>
           </motion.h2>
 
           <MasterpieceGallery />
