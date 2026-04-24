@@ -158,19 +158,34 @@ docker run -p 3000:3000 \
 
 Set production env vars in your deployment platform:
 
-**Vercel:**
+**Vercel (Recommended - Step by step):**
 ```bash
+# Add environment variables
 vercel env add INSFORGE_BASE_URL
+# Enter: https://e64sbexr.us-west.insforge.app
+
 vercel env add INSFORGE_ANON_KEY
+# Enter: your_insforge_anon_key
+
 vercel env add NEXT_PUBLIC_VAPI_PUBLIC_KEY
+# Enter: your_vapi_public_key
+
+# Deploy to production
+vercel deploy --prod
 ```
+
+Or set them in Vercel dashboard: Project → Settings → Environment Variables
 
 **Railway:**
 ```
-INSFORGE_BASE_URL=...
-INSFORGE_ANON_KEY=...
-NEXT_PUBLIC_VAPI_PUBLIC_KEY=...
+INSFORGE_BASE_URL=https://e64sbexr.us-west.insforge.app
+INSFORGE_ANON_KEY=your_insforge_anon_key
+NEXT_PUBLIC_VAPI_PUBLIC_KEY=your_vapi_public_key
 ```
+
+**Important:** 
+- `INSFORGE_BASE_URL` and `INSFORGE_ANON_KEY` are **server-side only** (never exposed to browser)
+- `NEXT_PUBLIC_VAPI_PUBLIC_KEY` is safe to expose (public VAPI key only)
 
 ### 5. Test Deployment
 
@@ -184,7 +199,14 @@ After deployment:
 
 ---
 
-## 🧪 Development Testing
+## 🏗️ Build & Testing
+
+### Test Local Build (Required before deployment)
+```bash
+npm run build
+```
+
+This builds the application exactly as Vercel will. If it succeeds locally, it will succeed on Vercel.
 
 ### Run Tests
 ```bash
@@ -199,6 +221,20 @@ npx tsc --noEmit
 ### Lint
 ```bash
 npm run lint
+```
+
+### Troubleshooting Build Failures
+
+**"Missing Insforge env vars" error during build:**
+- This is expected! Build phase doesn't need credentials
+- Env vars are checked at runtime (in API routes)
+- If build still fails, check TypeScript errors above the env var error
+
+**Solution:**
+```bash
+# Clean build cache and retry
+rm -rf .next
+npm run build
 ```
 
 ---
@@ -254,23 +290,43 @@ npm run lint
 
 ## 🔧 Troubleshooting
 
-### "Missing Insforge environment variables"
+### Build Fails with "Missing Insforge env vars"
+**Why:** This is expected during build. Env vars are only checked at runtime.
+**Fix:** 
+```bash
+rm -rf .next && npm run build
+```
+If it still fails, check for TypeScript errors above the env var error.
+
+### "Missing Insforge environment variables" at Runtime
 - Check `.env.local` has `INSFORGE_BASE_URL` and `INSFORGE_ANON_KEY`
 - Verify credentials are correct in Insforge dashboard
+- On Vercel: Check Settings → Environment Variables for both vars
 
 ### "Unauthorized" errors on API calls
 - Session cookie may have expired
 - Try logging out and back in
 - Check browser dev tools → Application → Cookies for `insforge_session`
+- On Vercel: Ensure `INSFORGE_BASE_URL` and `INSFORGE_ANON_KEY` are set
 
 ### Chat not working
 - Verify `AKASHML_API_KEY` is set in Insforge backend
-- Check AkashML API status
-- Review Insforge function logs
+- Check AkashML API status: `curl https://api.akashml.com/v1/chat/completions`
+- Review Insforge function logs: `insforge functions:logs chat-handler --follow`
 
 ### Voice not working
-- Verify `NEXT_PUBLIC_VAPI_PUBLIC_KEY` in env
-- Test VAPI connection in browser console
+- Verify `NEXT_PUBLIC_VAPI_PUBLIC_KEY` in `.env.local`
+- On Vercel: Check it's set in Environment Variables
+- Test VAPI connection in browser console: `fetch('/api/realtime/config')`
+
+### Vercel Deployment Fails
+1. Run `npm run build` locally to catch issues first
+2. Add all env vars to Vercel dashboard (Settings → Environment Variables):
+   - `INSFORGE_BASE_URL`
+   - `INSFORGE_ANON_KEY`
+   - `NEXT_PUBLIC_VAPI_PUBLIC_KEY`
+3. Redeploy: `vercel deploy --prod`
+4. Check Vercel build logs for specific errors
 
 ---
 

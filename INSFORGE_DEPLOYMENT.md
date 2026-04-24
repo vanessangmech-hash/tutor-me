@@ -91,6 +91,22 @@ insforge functions:deploy --image insforge.io/your-org/tutor-me-backend
 
 ---
 
+## 🛠️ Step 3.5: Build Locally First (Recommended)
+
+Before deploying, verify the frontend builds successfully:
+
+```bash
+npm run build
+```
+
+This catches environment variable issues early. Expected output:
+```
+✓ Compiled successfully in X.Xs
+✓ Generating static pages using 19 workers (16/16)
+```
+
+**Note:** It's normal if TypeScript warnings appear, but the build must complete successfully.
+
 ## ✅ Step 4: Verify Deployment
 
 ### Check Function Status
@@ -157,15 +173,23 @@ The frontend will automatically route all calls through the next.js `/api/functi
 insforge login --api-key your_actual_key
 ```
 
+### "Build failed" / "Missing Insforge env vars"
+This error during Next.js build is expected and normal. Env vars are only checked at runtime.
+- Build failure is only a real issue if there are TypeScript/syntax errors above this message
+- The frontend build doesn't need backend credentials to complete
+- Runtime (API routes) will check for credentials when actually used
+
 ### "Function deployment failed"
 1. Check function syntax: `deno check backend/functions/chat-handler.js`
 2. Verify env vars are set in Insforge dashboard
 3. Check logs: `insforge functions:logs <function-name>`
+4. Ensure all functions reference correct imports (no typos)
 
-### "Environment variables not found"
+### "Environment variables not found" at Runtime
 1. Go to project → Settings → Environment Variables
 2. Ensure all vars from [Step 2](#-step-2-configure-backend-environment-variables) are set
-3. Redeploy: `insforge functions:deploy backend/functions/`
+3. Redeploy functions: `insforge functions:deploy backend/functions/`
+4. Wait 1-2 minutes for env vars to propagate
 
 ### "Database connection error"
 - Verify `GHOST_CONNECTION_STRING` is correct
