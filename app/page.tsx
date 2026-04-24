@@ -1,284 +1,622 @@
 "use client"
 
+import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
+import { motion, useScroll, useTransform, useInView, useSpring } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Sidebar } from "@/components/sidebar"
+import { Navbar } from "@/components/navbar"
+import { AuthModal } from "@/components/auth-modal"
+import { Footer } from "@/components/footer"
 import { tutors } from "@/lib/tutors-data"
-import { ArrowRight, Users, GraduationCap, Sparkles, Play, ChevronRight } from "lucide-react"
+import { ArrowRight, Play, Sparkles, Users, Zap, Target, Star, ChevronRight } from "lucide-react"
 
-function HeroCard({ 
-  className, 
-  delay = 0 
-}: { 
-  className?: string
-  delay?: number 
-}) {
+// Animated 3D blob component
+function AnimatedBlob() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (ref.current) {
+        const rect = ref.current.getBoundingClientRect()
+        const centerX = rect.left + rect.width / 2
+        const centerY = rect.top + rect.height / 2
+        setMousePosition({
+          x: (e.clientX - centerX) / 30,
+          y: (e.clientY - centerY) / 30,
+        })
+      }
+    }
+
+    window.addEventListener("mousemove", handleMouseMove)
+    return () => window.removeEventListener("mousemove", handleMouseMove)
+  }, [])
+
   return (
-    <div 
-      className={`rounded-2xl bg-card p-4 shadow-lg ${className}`}
-      style={{ 
-        animation: `float 6s ease-in-out infinite`,
-        animationDelay: `${delay}s`
+    <motion.div
+      ref={ref}
+      className="relative h-[500px] w-[500px] lg:h-[600px] lg:w-[600px]"
+      animate={{
+        rotateX: mousePosition.y,
+        rotateY: -mousePosition.x,
       }}
+      transition={{ type: "spring", stiffness: 100, damping: 30 }}
+      style={{ perspective: 1000, transformStyle: "preserve-3d" }}
     >
-      <div className="mb-3 flex items-center gap-3">
-        <div className="h-10 w-10 rounded-full bg-primary/20" />
-        <div className="space-y-1">
-          <div className="h-3 w-24 rounded bg-muted" />
-          <div className="h-2 w-16 rounded bg-muted" />
-        </div>
-      </div>
-      <div className="space-y-2">
-        <div className="h-2 w-full rounded bg-muted" />
-        <div className="h-2 w-3/4 rounded bg-muted" />
-      </div>
+      <Image
+        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-JbFmTRcRgVW6J2BoZP6BKDUPwBJJ5m.png"
+        alt="3D Abstract Shape"
+        fill
+        className="object-contain drop-shadow-2xl"
+        priority
+      />
+    </motion.div>
+  )
+}
+
+// Animated counter component
+function AnimatedCounter({ value, suffix = "" }: { value: number; suffix?: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const isInView = useInView(ref, { once: true })
+  const spring = useSpring(0, { stiffness: 100, damping: 30 })
+
+  useEffect(() => {
+    if (isInView) {
+      spring.set(value)
+    }
+  }, [isInView, spring, value])
+
+  useEffect(() => {
+    return spring.on("change", (v) => {
+      if (ref.current) {
+        ref.current.textContent = Math.floor(v).toLocaleString() + suffix
+      }
+    })
+  }, [spring, suffix])
+
+  return <span ref={ref}>0{suffix}</span>
+}
+
+// Card gallery with fan effect
+function CardGallery() {
+  const cards = tutors.slice(0, 6)
+
+  return (
+    <div className="relative flex h-[400px] items-center justify-center">
+      {cards.map((tutor, i) => {
+        const rotation = (i - 2.5) * 12
+        const translateY = Math.abs(i - 2.5) * 15
+
+        return (
+          <motion.div
+            key={tutor.id}
+            className="absolute h-56 w-44 overflow-hidden rounded-2xl bg-card shadow-xl"
+            initial={{ opacity: 0, y: 100, rotate: 0 }}
+            whileInView={{ opacity: 1, y: translateY, rotate: rotation }}
+            viewport={{ once: true }}
+            transition={{ delay: i * 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            whileHover={{ 
+              scale: 1.1, 
+              rotate: 0, 
+              y: -20,
+              zIndex: 10,
+              transition: { duration: 0.3 }
+            }}
+            style={{ 
+              zIndex: i === 2 || i === 3 ? 5 : 6 - Math.abs(i - 2.5),
+              left: `calc(50% + ${(i - 2.5) * 60}px - 88px)`
+            }}
+          >
+            <div
+              className="h-full w-full bg-cover bg-center"
+              style={{ backgroundImage: `url(${tutor.thumbnail})` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 to-transparent" />
+            <div className="absolute bottom-4 left-4 right-4">
+              <p className="text-sm font-bold text-white">{tutor.name}</p>
+              <p className="text-xs text-white/70">{tutor.subject}</p>
+            </div>
+          </motion.div>
+        )
+      })}
     </div>
   )
 }
 
-function TutorPreviewCard({ tutor }: { tutor: typeof tutors[0] }) {
+// Testimonial section with floating avatars
+function TestimonialSection() {
+  const testimonials = [
+    {
+      name: "Sarah K.",
+      role: "Computer Science Student",
+      text: "LearnSync changed how I study. The AI tutors feel like real mentors!",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop"
+    },
+    {
+      name: "Marcus L.",
+      role: "High School Senior",
+      text: "Got into my dream college after using LearnSync for SAT prep.",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop"
+    },
+    {
+      name: "Emily R.",
+      role: "Graphic Designer",
+      text: "The collaborative rooms are amazing. Learning with friends is so much better!",
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop"
+    }
+  ]
+
+  const floatingAvatars = [
+    { top: "5%", left: "5%", size: 60, delay: 0 },
+    { top: "15%", left: "25%", size: 50, delay: 0.5 },
+    { top: "8%", right: "20%", size: 55, delay: 0.3 },
+    { top: "20%", right: "5%", size: 45, delay: 0.7 },
+    { bottom: "25%", left: "8%", size: 48, delay: 0.2 },
+    { bottom: "15%", right: "15%", size: 52, delay: 0.6 },
+  ]
+
   return (
-    <Link href="/tutors" className="group block flex-shrink-0">
-      <div className="relative h-48 w-36 overflow-hidden rounded-xl transition-transform duration-300 group-hover:scale-105">
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${tutor.thumbnail})` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-        <div className="absolute bottom-3 left-3 right-3">
-          <p className="text-sm font-medium text-white">{tutor.subject}</p>
+    <section className="relative overflow-hidden bg-muted/50 py-32">
+      {/* Curved text */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-10">
+        <svg viewBox="0 0 1200 400" className="absolute left-0 top-1/2 w-full -translate-y-1/2">
+          <path
+            id="curve"
+            d="M 0 300 Q 300 100 600 200 Q 900 300 1200 100"
+            fill="none"
+          />
+          <text className="fill-foreground text-2xl font-bold">
+            <textPath href="#curve">
+              over how our students have transformed their lives through our classes. Read their stories.
+            </textPath>
+          </text>
+        </svg>
+      </div>
+
+      {/* Floating avatars */}
+      {floatingAvatars.map((avatar, i) => (
+        <motion.div
+          key={i}
+          className="absolute rounded-full bg-card/80 p-1 shadow-lg ring-2 ring-border"
+          style={{
+            top: avatar.top,
+            left: avatar.left,
+            right: avatar.right,
+            bottom: avatar.bottom,
+            width: avatar.size,
+            height: avatar.size,
+          }}
+          initial={{ opacity: 0, scale: 0 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: avatar.delay, duration: 0.5, type: "spring" }}
+          animate={{
+            y: [0, -10, 0],
+          }}
+          //@ts-expect-error - framer-motion types
+          transition={{
+            y: { repeat: Infinity, duration: 3 + i * 0.5, ease: "easeInOut" }
+          }}
+        >
+          <div className="h-full w-full rounded-full bg-muted" />
+        </motion.div>
+      ))}
+
+      <div className="mx-auto max-w-6xl px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center"
+        >
+          <span className="inline-block rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground">
+            Testimonials
+          </span>
+          <h2 className="mt-4 text-4xl font-bold tracking-tight text-foreground lg:text-5xl">
+            Student Testimonials
+          </h2>
+          <p className="mt-4 text-lg text-muted-foreground">
+            See how our members have reduced stress and enhanced well-being with our support and guidance.
+          </p>
+        </motion.div>
+
+        <div className="mt-16 grid gap-6 md:grid-cols-3">
+          {testimonials.map((testimonial, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.15, duration: 0.6 }}
+              className="group relative overflow-hidden rounded-3xl bg-card p-8 shadow-lg transition-all hover:shadow-xl"
+            >
+              <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-accent/20" />
+              <div className="relative">
+                <div className="mb-4 flex items-center gap-1">
+                  {[...Array(5)].map((_, j) => (
+                    <Star key={j} className="h-4 w-4 fill-accent text-accent" />
+                  ))}
+                </div>
+                <p className="text-foreground/80">&ldquo;{testimonial.text}&rdquo;</p>
+                <div className="mt-6 flex items-center gap-3">
+                  <Image
+                    src={testimonial.avatar}
+                    alt={testimonial.name}
+                    width={48}
+                    height={48}
+                    className="rounded-full object-cover"
+                  />
+                  <div>
+                    <p className="font-semibold text-foreground">{testimonial.name}</p>
+                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </div>
-    </Link>
+    </section>
+  )
+}
+
+// Features bento grid
+function FeaturesSection() {
+  const features = [
+    {
+      title: "AI-Powered Tutors",
+      description: "Personalized learning paths that adapt to your unique style and pace.",
+      icon: Sparkles,
+      size: "large",
+      color: "bg-accent"
+    },
+    {
+      title: "Multiplayer Rooms",
+      description: "Learn together with friends in real-time collaborative sessions.",
+      icon: Users,
+      size: "small",
+      color: "bg-foreground"
+    },
+    {
+      title: "Instant Feedback",
+      description: "Get immediate responses and corrections as you learn.",
+      icon: Zap,
+      size: "small",
+      color: "bg-foreground"
+    },
+    {
+      title: "Goal Tracking",
+      description: "Set targets and watch your progress with detailed analytics.",
+      icon: Target,
+      size: "medium",
+      color: "bg-accent"
+    }
+  ]
+
+  return (
+    <section className="py-32">
+      <div className="mx-auto max-w-6xl px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-16 text-center"
+        >
+          <h2 className="text-4xl font-bold tracking-tight text-foreground lg:text-5xl">
+            Everything you need to learn
+          </h2>
+          <p className="mt-4 text-lg text-muted-foreground">
+            Powerful features designed for the modern learner
+          </p>
+        </motion.div>
+
+        <div className="grid gap-4 md:grid-cols-3 md:grid-rows-2">
+          {/* Large card */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="group relative overflow-hidden rounded-3xl bg-accent p-8 md:col-span-2 md:row-span-2"
+          >
+            <div className="relative z-10">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-foreground/10">
+                <Sparkles className="h-7 w-7 text-accent-foreground" />
+              </div>
+              <h3 className="text-2xl font-bold text-accent-foreground">AI-Powered Tutors</h3>
+              <p className="mt-2 max-w-md text-accent-foreground/80">
+                Personalized learning paths that adapt to your unique style and pace. Our AI understands how you learn best.
+              </p>
+            </div>
+            <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-accent-foreground/10 transition-transform group-hover:scale-110" />
+            <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-accent-foreground/10 transition-transform group-hover:scale-125" />
+          </motion.div>
+
+          {/* Small cards */}
+          {features.slice(1, 4).map((feature, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1, duration: 0.6 }}
+              className={`group relative overflow-hidden rounded-3xl p-6 ${
+                feature.color === "bg-foreground" ? "bg-foreground text-card" : "bg-card"
+              }`}
+            >
+              <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-xl ${
+                feature.color === "bg-foreground" ? "bg-card/10" : "bg-foreground/5"
+              }`}>
+                <feature.icon className={`h-6 w-6 ${
+                  feature.color === "bg-foreground" ? "text-card" : "text-foreground"
+                }`} />
+              </div>
+              <h3 className={`font-bold ${
+                feature.color === "bg-foreground" ? "text-card" : "text-foreground"
+              }`}>{feature.title}</h3>
+              <p className={`mt-1 text-sm ${
+                feature.color === "bg-foreground" ? "text-card/70" : "text-muted-foreground"
+              }`}>{feature.description}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// Tutor preview carousel
+function TutorCarousel({ onTutorClick }: { onTutorClick: () => void }) {
+  return (
+    <section className="overflow-hidden py-20">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground">Meet our AI Tutors</h2>
+            <p className="mt-2 text-muted-foreground">Specialized in every subject you need</p>
+          </div>
+          <Button variant="ghost" className="gap-1" asChild>
+            <Link href="/tutors">
+              View all
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      <motion.div
+        className="flex gap-4 px-6"
+        animate={{ x: [0, -1000] }}
+        transition={{ repeat: Infinity, duration: 30, ease: "linear" }}
+      >
+        {[...tutors, ...tutors].map((tutor, i) => (
+          <motion.button
+            key={`${tutor.id}-${i}`}
+            onClick={onTutorClick}
+            className="group relative h-64 w-48 flex-shrink-0 overflow-hidden rounded-2xl"
+            whileHover={{ scale: 1.05, y: -10 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          >
+            <div
+              className="h-full w-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+              style={{ backgroundImage: `url(${tutor.thumbnail})` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-foreground/90 via-foreground/20 to-transparent" />
+            <div className="absolute bottom-4 left-4 right-4 text-left">
+              <p className="font-bold text-card">{tutor.name}</p>
+              <p className="text-sm text-card/70">{tutor.subject}</p>
+              <div className="mt-2 flex items-center gap-1">
+                <Star className="h-3 w-3 fill-accent text-accent" />
+                <span className="text-xs text-card/80">{tutor.rating}</span>
+              </div>
+            </div>
+          </motion.button>
+        ))}
+      </motion.div>
+    </section>
   )
 }
 
 export default function HomePage() {
+  const [showAuth, setShowAuth] = useState(false)
+  const { scrollYProgress } = useScroll()
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0])
+  const heroScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.95])
+
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      
-      <main className="ml-16 flex-1 lg:ml-20">
-        {/* Hero Section */}
-        <section className="relative overflow-hidden px-6 py-20 lg:px-12 lg:py-32">
-          {/* Background Gradient */}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
-          
-          <div className="mx-auto max-w-6xl">
-            <div className="grid items-center gap-12 lg:grid-cols-2">
-              {/* Left Content */}
-              <div className="relative z-10 space-y-8">
-                <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
-                  <Sparkles className="h-4 w-4" />
-                  AI-Powered Learning
+    <div className="min-h-screen overflow-x-hidden bg-background">
+      <Navbar onAuthClick={() => setShowAuth(true)} />
+      <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} />
+
+      {/* Hero Section - Sapforce style */}
+      <motion.section
+        style={{ opacity: heroOpacity, scale: heroScale }}
+        className="relative min-h-screen overflow-hidden pt-32"
+      >
+        {/* Giant typography background */}
+        <motion.h1
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="pointer-events-none absolute left-1/2 top-24 -translate-x-1/2 whitespace-nowrap text-[12vw] font-black tracking-tighter text-foreground/5 lg:text-[180px]"
+        >
+          LEARNSYNC.
+        </motion.h1>
+
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="relative flex min-h-[80vh] items-center justify-center">
+            {/* Left stats */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="absolute left-0 top-1/3 hidden lg:block"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex -space-x-2">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="h-10 w-10 rounded-full bg-muted ring-2 ring-card"
+                    />
+                  ))}
                 </div>
-                
-                <h1 className="text-balance text-4xl font-bold leading-tight tracking-tight text-foreground lg:text-6xl">
-                  Learn with tutors that adapt to{" "}
-                  <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                    your style
-                  </span>
-                </h1>
-                
-                <p className="max-w-lg text-pretty text-lg text-muted-foreground">
-                  Join multiplayer classrooms with AI tutors that understand how you learn. 
-                  Create rooms, collaborate with peers, and master any subject.
-                </p>
-                
-                <div className="flex flex-wrap gap-4">
-                  <Button size="lg" className="gap-2 rounded-xl" asChild>
-                    <Link href="/rooms">
-                      Create Room
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button size="lg" variant="outline" className="gap-2 rounded-xl" asChild>
-                    <Link href="/rooms">
-                      <Play className="h-4 w-4" />
-                      Join Room
-                    </Link>
-                  </Button>
-                </div>
-                
-                {/* Stats */}
-                <div className="flex gap-8 pt-4">
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">50K+</p>
-                    <p className="text-sm text-muted-foreground">Active Learners</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">100+</p>
-                    <p className="text-sm text-muted-foreground">AI Tutors</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">4.9</p>
-                    <p className="text-sm text-muted-foreground">Avg Rating</p>
-                  </div>
+                <div>
+                  <p className="text-2xl font-bold">
+                    <AnimatedCounter value={2} suffix="M+" />
+                  </p>
+                  <p className="text-sm text-muted-foreground">World active users</p>
                 </div>
               </div>
               
-              {/* Right - Floating Cards */}
-              <div className="relative hidden h-[500px] lg:block">
-                <style jsx>{`
-                  @keyframes float {
-                    0%, 100% { transform: translateY(0px) rotate(0deg); }
-                    50% { transform: translateY(-20px) rotate(1deg); }
-                  }
-                `}</style>
-                <HeroCard className="absolute left-0 top-0 w-64" delay={0} />
-                <HeroCard className="absolute right-0 top-20 w-56" delay={1} />
-                <HeroCard className="absolute bottom-20 left-10 w-60" delay={2} />
-                <HeroCard className="absolute bottom-0 right-10 w-52" delay={0.5} />
-              </div>
-            </div>
-          </div>
-        </section>
-        
-        {/* Tutor Preview Section */}
-        <section className="border-t border-border bg-card/50 px-6 py-16 lg:px-12">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-foreground">Popular Tutors</h2>
-                <p className="mt-1 text-muted-foreground">Discover AI tutors loved by learners</p>
-              </div>
-              <Button variant="ghost" className="gap-1" asChild>
-                <Link href="/tutors">
-                  View all
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-            
-            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-              {tutors.slice(0, 8).map((tutor) => (
-                <TutorPreviewCard key={tutor.id} tutor={tutor} />
-              ))}
-            </div>
-          </div>
-        </section>
-        
-        {/* Features Section */}
-        <section className="px-6 py-20 lg:px-12">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-12 text-center">
-              <h2 className="text-3xl font-bold text-foreground">How It Works</h2>
-              <p className="mt-2 text-muted-foreground">Get started in three simple steps</p>
-            </div>
-            
-            <div className="grid gap-6 md:grid-cols-3">
+              <p className="mt-16 max-w-[200px] text-lg text-foreground">
+                The learning platform that keeps your flow with AI tools and built-in collaboration
+              </p>
+            </motion.div>
+
+            {/* Center 3D blob */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <AnimatedBlob />
+            </motion.div>
+
+            {/* Right features */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="absolute right-0 top-1/3 hidden text-right lg:block"
+            >
               {[
-                {
-                  icon: Users,
-                  title: "Create a Room",
-                  description: "Start a multiplayer classroom and invite friends or join an existing session."
-                },
-                {
-                  icon: GraduationCap,
-                  title: "Choose Your Tutor",
-                  description: "Browse AI tutors specialized in your subject and learning style."
-                },
-                {
-                  icon: Sparkles,
-                  title: "Learn Together",
-                  description: "Collaborate with peers while your AI tutor guides the session."
-                }
-              ].map((feature, i) => (
-                <div 
+                { label: "Web based", num: "01" },
+                { label: "Collaborative", num: "02" },
+                { label: "Real-time", num: "03" },
+              ].map((item, i) => (
+                <motion.p
                   key={i}
-                  className="group rounded-2xl border border-border bg-card p-8 transition-all duration-300 hover:border-primary/20 hover:shadow-lg"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.6 + i * 0.1 }}
+                  className="text-sm text-muted-foreground"
                 >
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                    <feature.icon className="h-6 w-6" />
-                  </div>
-                  <h3 className="mb-2 text-lg font-semibold text-foreground">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </div>
+                  {item.label} <span className="text-foreground/30">/{item.num}</span>
+                </motion.p>
               ))}
-            </div>
+            </motion.div>
+
+            {/* How it works button */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.7, type: "spring", bounce: 0.4 }}
+              className="absolute bottom-20 right-10"
+            >
+              <button
+                onClick={() => setShowAuth(true)}
+                className="flex h-28 w-28 items-center justify-center rounded-full bg-accent text-sm font-medium text-accent-foreground shadow-lg transition-transform hover:scale-110"
+              >
+                <Play className="mr-1 h-4 w-4" />
+                How it works?
+              </button>
+            </motion.div>
           </div>
-        </section>
-        
-        {/* Create Your Own Tutor Section */}
-        <section className="border-t border-border bg-card/50 px-6 py-20 lg:px-12">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl font-bold text-foreground">Create Your Own Tutor</h2>
-            <p className="mt-2 text-muted-foreground">
-              Customize an AI tutor for your specific needs
-            </p>
-            
-            <div className="mt-10 rounded-2xl border border-border bg-card p-8">
-              <div className="space-y-6">
-                <div className="text-left">
-                  <label className="mb-2 block text-sm font-medium text-foreground">
-                    What subject should your tutor specialize in?
-                  </label>
-                  <Input 
-                    placeholder="e.g., Advanced Calculus, Machine Learning, Spanish..." 
-                    className="rounded-xl"
-                  />
-                </div>
-                
-                <div className="text-left">
-                  <label className="mb-2 block text-sm font-medium text-foreground">
-                    Teaching Style
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {["Visual", "Step-by-step", "Conversational", "Project-based", "Quiz-focused"].map((style) => (
-                      <button
-                        key={style}
-                        className="rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-primary hover:bg-primary/5"
-                      >
-                        {style}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                <Button size="lg" className="w-full rounded-xl">
-                  Create Custom Tutor
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
-        
-        {/* CTA Section */}
-        <section className="px-6 py-24 lg:px-12">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-4xl font-bold text-foreground">
-              Ready to transform how you learn?
+        </div>
+      </motion.section>
+
+      {/* Masterpiece Section */}
+      <section className="bg-muted/30 py-32">
+        <div className="mx-auto max-w-6xl px-6 text-center">
+          <motion.h2
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-4xl font-bold tracking-tight text-foreground lg:text-6xl"
+          >
+            A place to display your{" "}
+            <span className="italic">masterpiece.</span>
+          </motion.h2>
+
+          <CardGallery />
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="mx-auto mt-8 max-w-xl text-lg text-muted-foreground"
+          >
+            Students can showcase their achievements, and peers can discover and learn from each other.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-8 flex items-center justify-center gap-4"
+          >
+            <Button
+              size="lg"
+              className="gap-2 rounded-full"
+              onClick={() => setShowAuth(true)}
+            >
+              Join for $9.99/m
+            </Button>
+            <Button
+              size="lg"
+              variant="ghost"
+              className="gap-1"
+              asChild
+            >
+              <Link href="/about">
+                Read more
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Tutor Carousel */}
+      <TutorCarousel onTutorClick={() => setShowAuth(true)} />
+
+      {/* Features Bento */}
+      <FeaturesSection />
+
+      {/* Testimonials */}
+      <TestimonialSection />
+
+      {/* CTA Section */}
+      <section className="py-32">
+        <div className="mx-auto max-w-4xl px-6 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-4xl font-bold tracking-tight text-foreground lg:text-5xl">
+              Improve flexibility, strength, and peace.
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Join thousands of learners already using LearnSync to master new skills.
+              Classes designed to enhance flexibility, build strength, and promote deep relaxation, all within our supportive community.
             </p>
-            <div className="mt-8 flex justify-center gap-4">
-              <Button size="lg" className="gap-2 rounded-xl" asChild>
-                <Link href="/tutors">
-                  Get Started Free
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </section>
-        
-        {/* Footer */}
-        <footer className="border-t border-border px-6 py-8 lg:px-12">
-          <div className="mx-auto flex max-w-6xl items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <span className="text-sm font-bold text-primary-foreground">L</span>
-              </div>
-              <span className="font-semibold text-foreground">LearnSync</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Made with AI, for learners everywhere.
-            </p>
-          </div>
-        </footer>
-      </main>
+            <Button
+              size="lg"
+              className="mt-8 gap-2 rounded-full"
+              onClick={() => setShowAuth(true)}
+            >
+              Get started
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <Footer />
     </div>
   )
 }
