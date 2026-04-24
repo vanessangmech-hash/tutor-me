@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { GraduationCap, Twitter, Github, Linkedin, Instagram } from "lucide-react"
+import { Twitter, Github, Linkedin, Instagram } from "lucide-react"
 
 const footerLinks = {
   product: [
@@ -45,13 +45,16 @@ export function Footer() {
           {/* Brand */}
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-foreground text-card">
-                <GraduationCap className="h-5 w-5" />
-              </div>
-              <span className="text-xl font-bold text-foreground">LearnSync</span>
+              <motion.div 
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-foreground text-card"
+                whileHover={{ rotate: 5, scale: 1.05 }}
+              >
+                <span className="text-lg font-bold">T</span>
+              </motion.div>
+              <span className="text-xl font-bold text-foreground">Tutor Me</span>
             </Link>
             <p className="mt-4 max-w-xs text-muted-foreground">
-              AI-powered tutors that adapt to your unique learning style. Study smarter, not harder.
+              AI-powered tutors that adapt to your unique learning style. Learn with friends, your way.
             </p>
             
             {/* Social Links */}
@@ -140,10 +143,10 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 md:flex-row">
           <p className="text-sm text-muted-foreground">
-            © 2024 LearnSync. All rights reserved.
+            © 2024 Tutor Me. All rights reserved.
           </p>
           <p className="text-sm text-muted-foreground">
-            Made with ❤️ for learners everywhere
+            Made with love for learners everywhere
           </p>
         </div>
       </div>

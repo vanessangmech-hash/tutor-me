@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { X, Mail, Lock, User, ArrowRight, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useAuth, UserPlan } from "@/lib/auth-context"
 
 interface AuthModalProps {
   isOpen: boolean
@@ -16,15 +17,34 @@ interface AuthModalProps {
 export function AuthModal({ isOpen, onClose, onSuccess, defaultMode = "login" }: AuthModalProps) {
   const [mode, setMode] = useState<"login" | "signup">(defaultMode)
   const [isLoading, setIsLoading] = useState(false)
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [selectedPlan, setSelectedPlan] = useState<UserPlan>("free")
+  const { login, signup } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setIsLoading(false)
-    onSuccess?.()
-    onClose()
+    
+    try {
+      if (mode === "login") {
+        await login(email, password)
+      } else {
+        await signup(name, email, password, selectedPlan)
+      }
+      onSuccess?.()
+      onClose()
+      // Reset form
+      setName("")
+      setEmail("")
+      setPassword("")
+      setSelectedPlan("free")
+    } catch (error) {
+      console.error("Auth error:", error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -69,7 +89,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, defaultMode = "login" }:
                 </motion.div>
 
                 <h2 className="text-2xl font-bold text-card">
-                  {mode === "login" ? "Welcome back" : "Join LearnSync"}
+                  {mode === "login" ? "Welcome back" : "Join Tutor Me"}
                 </h2>
                 <p className="mt-1 text-sm text-card/70">
                   {mode === "login"
@@ -81,28 +101,38 @@ export function AuthModal({ isOpen, onClose, onSuccess, defaultMode = "login" }:
               {/* Form */}
               <form onSubmit={handleSubmit} className="p-8">
                 <div className="space-y-4">
-                  {mode === "signup" && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                    >
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          placeholder="Full name"
-                          className="h-12 rounded-xl border-border bg-muted/50 pl-11"
-                        />
-                      </div>
-                    </motion.div>
-                  )}
+                  <AnimatePresence mode="wait">
+                    {mode === "signup" && (
+                      <motion.div
+                        key="name-field"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div className="relative">
+                          <User className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            placeholder="Full name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="h-12 rounded-xl border-border bg-muted/50 pl-11"
+                            required
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       type="email"
                       placeholder="Email address"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       className="h-12 rounded-xl border-border bg-muted/50 pl-11"
+                      required
                     />
                   </div>
 
@@ -111,39 +141,56 @@ export function AuthModal({ isOpen, onClose, onSuccess, defaultMode = "login" }:
                     <Input
                       type="password"
                       placeholder="Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       className="h-12 rounded-xl border-border bg-muted/50 pl-11"
+                      required
                     />
                   </div>
                 </div>
 
-                {mode === "signup" && (
-                  <div className="mt-6">
-                    <p className="mb-3 text-sm font-medium text-foreground">Choose your plan</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { name: "Free", price: "$0" },
-                        { name: "Student", price: "$9" },
-                        { name: "Pro", price: "$19" },
-                      ].map((plan, i) => (
-                        <label
-                          key={plan.name}
-                          className="group relative cursor-pointer"
-                        >
-                          <input
-                            type="radio"
-                            name="plan"
-                            defaultChecked={i === 0}
-                            className="peer sr-only"
-                          />
-                          <div className="rounded-xl border-2 border-border bg-muted/30 p-3 text-center transition-all peer-checked:border-foreground peer-checked:bg-foreground/5">
-                            <p className="text-xs text-muted-foreground">{plan.price}/mo</p>
-                            <p className="font-medium text-foreground">{plan.name}</p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <AnimatePresence mode="wait">
+                  {mode === "signup" && (
+                    <motion.div 
+                      key="plan-selector"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="mt-6"
+                    >
+                      <p className="mb-3 text-sm font-medium text-foreground">Choose your plan</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { name: "Free", price: "$0", value: "free" as UserPlan },
+                          { name: "Student", price: "$9", value: "student" as UserPlan },
+                          { name: "Pro", price: "$19", value: "professional" as UserPlan },
+                        ].map((plan) => (
+                          <label
+                            key={plan.name}
+                            className="group relative cursor-pointer"
+                          >
+                            <input
+                              type="radio"
+                              name="plan"
+                              checked={selectedPlan === plan.value}
+                              onChange={() => setSelectedPlan(plan.value)}
+                              className="peer sr-only"
+                            />
+                            <motion.div 
+                              className="rounded-xl border-2 border-border bg-muted/30 p-3 text-center transition-all peer-checked:border-foreground peer-checked:bg-foreground/5"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <p className="text-xs text-muted-foreground">{plan.price}/mo</p>
+                              <p className="font-medium text-foreground">{plan.name}</p>
+                            </motion.div>
+                          </label>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <Button
                   type="submit"

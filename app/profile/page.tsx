@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { motion } from "framer-motion"
+import { useRouter } from "next/navigation"
+import { motion, AnimatePresence } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import { AuthModal } from "@/components/auth-modal"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/lib/auth-context"
 import { tutors } from "@/lib/tutors-data"
 import { 
   Settings, 
@@ -19,36 +21,49 @@ import {
   ChevronRight,
   Crown,
   Zap,
-  Check
+  Check,
+  Plus,
+  Users,
+  Play,
+  ArrowRight
 } from "lucide-react"
 
-const plans = [
+const recentSessions = [
   {
-    name: "Free",
-    price: "$0",
-    description: "Perfect for getting started",
-    features: ["3 AI tutors", "2 rooms/month", "Basic analytics"],
-    color: "bg-muted",
-    textColor: "text-foreground",
-    current: false
+    id: "1",
+    tutorName: "MathMaven",
+    subject: "Calculus",
+    date: "Today, 2:30 PM",
+    duration: "45 min",
+    progress: 78,
+    thumbnail: "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=100&h=100&fit=crop"
   },
   {
-    name: "Student",
-    price: "$9",
-    description: "Most popular for students",
-    features: ["Unlimited tutors", "10 rooms/month", "Advanced analytics", "Priority support"],
-    color: "bg-foreground",
-    textColor: "text-card",
-    current: true
+    id: "2",
+    tutorName: "CodeKing",
+    subject: "Python Basics",
+    date: "Yesterday",
+    duration: "1h 20min",
+    progress: 92,
+    thumbnail: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=100&h=100&fit=crop"
   },
   {
-    name: "Professional",
-    price: "$19",
-    description: "For power learners",
-    features: ["Everything in Student", "Unlimited rooms", "Custom tutors", "API access"],
-    color: "bg-accent",
-    textColor: "text-accent-foreground",
-    current: false
+    id: "3",
+    tutorName: "PhysicsPhenom",
+    subject: "Quantum Mechanics",
+    date: "2 days ago",
+    duration: "55 min",
+    progress: 45,
+    thumbnail: "https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?w=100&h=100&fit=crop"
+  },
+  {
+    id: "4",
+    tutorName: "SpanishSlay",
+    subject: "Conversational Spanish",
+    date: "3 days ago",
+    duration: "30 min",
+    progress: 100,
+    thumbnail: "https://images.unsplash.com/photo-1489945052260-4f21c52571bf?w=100&h=100&fit=crop"
   }
 ]
 
@@ -68,7 +83,66 @@ const achievements = [
 
 export default function ProfilePage() {
   const [showAuth, setShowAuth] = useState(false)
+  const { user, isLoggedIn } = useAuth()
+  const router = useRouter()
   const savedTutors = tutors.slice(0, 4)
+
+  // Redirect to home if not logged in
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setShowAuth(true)
+    }
+  }, [isLoggedIn])
+
+  const getPlanColor = (plan: string) => {
+    switch (plan) {
+      case "professional":
+        return "bg-accent text-accent-foreground"
+      case "student":
+        return "bg-foreground text-card"
+      default:
+        return "bg-muted text-foreground"
+    }
+  }
+
+  const getPlanLabel = (plan: string) => {
+    switch (plan) {
+      case "professional":
+        return "Professional"
+      case "student":
+        return "Student"
+      default:
+        return "Free"
+    }
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar onAuthClick={() => setShowAuth(true)} />
+        <AuthModal 
+          isOpen={showAuth} 
+          onClose={() => {
+            setShowAuth(false)
+            router.push("/")
+          }}
+          onSuccess={() => setShowAuth(false)}
+        />
+        <div className="flex min-h-screen items-center justify-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center"
+          >
+            <h2 className="text-2xl font-bold text-foreground">Please sign in to view your profile</h2>
+            <Button className="mt-4 rounded-full" onClick={() => setShowAuth(true)}>
+              Sign In
+            </Button>
+          </motion.div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -81,7 +155,7 @@ export default function ProfilePage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative mb-12 overflow-hidden rounded-3xl bg-foreground p-8 text-card"
+            className="relative mb-8 overflow-hidden rounded-3xl bg-foreground p-8 text-card"
           >
             <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-accent/20" />
             <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-card/5" />
@@ -96,7 +170,7 @@ export default function ProfilePage() {
               >
                 <div className="h-24 w-24 overflow-hidden rounded-2xl bg-muted ring-4 ring-card/20">
                   <Image
-                    src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop"
+                    src={user?.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop"}
                     alt="Profile"
                     width={96}
                     height={96}
@@ -111,13 +185,13 @@ export default function ProfilePage() {
               {/* Info */}
               <div className="flex-1">
                 <div className="flex items-center gap-3">
-                  <h1 className="text-3xl font-bold">Alex Johnson</h1>
-                  <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-                    Student Plan
+                  <h1 className="text-3xl font-bold">{user?.name || "User"}</h1>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getPlanColor(user?.plan || "free")}`}>
+                    {getPlanLabel(user?.plan || "free")} Plan
                   </span>
                 </div>
-                <p className="mt-1 text-card/70">alex.johnson@email.com</p>
-                <p className="mt-2 text-sm text-card/60">Learning since January 2024</p>
+                <p className="mt-1 text-card/70">{user?.email}</p>
+                <p className="mt-2 text-sm text-card/60">Learning since {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
               </div>
               
               {/* Actions */}
@@ -133,15 +207,151 @@ export default function ProfilePage() {
               </Button>
             </div>
           </motion.div>
+
+          {/* Quick Actions - Create/Join Room */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-8"
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              <motion.div
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Link
+                  href="/rooms?action=create"
+                  className="group flex items-center gap-4 rounded-3xl bg-accent p-6 transition-shadow hover:shadow-lg"
+                >
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-foreground/10">
+                    <Plus className="h-8 w-8 text-accent-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-accent-foreground">Create a Room</h3>
+                    <p className="text-sm text-accent-foreground/70">Start a new study session with AI</p>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-accent-foreground transition-transform group-hover:translate-x-1" />
+                </Link>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Link
+                  href="/rooms?action=join"
+                  className="group flex items-center gap-4 rounded-3xl bg-foreground p-6 text-card transition-shadow hover:shadow-lg"
+                >
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-card/10">
+                    <Users className="h-8 w-8 text-card" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold">Join a Room</h3>
+                    <p className="text-sm text-card/70">Enter a room code to join friends</p>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-card transition-transform group-hover:translate-x-1" />
+                </Link>
+              </motion.div>
+            </div>
+          </motion.section>
+
+          {/* Recent Sessions with Progress */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-8"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-foreground">Recent Sessions</h2>
+              <Button variant="ghost" className="gap-1 rounded-full">
+                View all
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {recentSessions.map((session, i) => (
+                <motion.div
+                  key={session.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + i * 0.1 }}
+                  whileHover={{ x: 4 }}
+                  className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition-all hover:shadow-md"
+                >
+                  <div className="relative h-14 w-14 overflow-hidden rounded-xl">
+                    <Image
+                      src={session.thumbnail}
+                      alt={session.tutorName}
+                      fill
+                      className="object-cover"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-foreground/40 opacity-0 transition-opacity group-hover:opacity-100">
+                      <Play className="h-5 w-5 text-card" />
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold text-foreground">{session.tutorName}</h4>
+                      <span className="text-sm text-muted-foreground">• {session.subject}</span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+                      <span>{session.date}</span>
+                      <span>• {session.duration}</span>
+                    </div>
+                  </div>
+
+                  {/* Progress */}
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-foreground">{session.progress}%</p>
+                      <p className="text-xs text-muted-foreground">Progress</p>
+                    </div>
+                    <div className="h-12 w-12">
+                      <svg className="h-12 w-12 -rotate-90" viewBox="0 0 36 36">
+                        <circle
+                          cx="18"
+                          cy="18"
+                          r="14"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          className="text-muted"
+                        />
+                        <motion.circle
+                          cx="18"
+                          cy="18"
+                          r="14"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          className="text-accent"
+                          strokeDasharray={88}
+                          initial={{ strokeDashoffset: 88 }}
+                          animate={{ strokeDashoffset: 88 - (88 * session.progress) / 100 }}
+                          transition={{ delay: 0.5 + i * 0.1, duration: 0.8 }}
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.section>
           
           {/* Stats Grid */}
-          <div className="mb-12 grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
             {stats.map((stat, i) => (
               <motion.div
                 key={stat.label}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
+                transition={{ delay: 0.4 + i * 0.1 }}
+                whileHover={{ y: -2 }}
                 className="rounded-2xl border border-border bg-card p-6 text-center"
               >
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
@@ -152,62 +362,55 @@ export default function ProfilePage() {
               </motion.div>
             ))}
           </div>
-          
+
           {/* Current Plan */}
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mb-12"
+            transition={{ delay: 0.5 }}
+            className="mb-8"
           >
-            <h2 className="mb-6 text-2xl font-bold text-foreground">Your Plan</h2>
-            <div className="grid gap-4 md:grid-cols-3">
-              {plans.map((plan, i) => (
-                <motion.div
-                  key={plan.name}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.4 + i * 0.1 }}
-                  className={`relative overflow-hidden rounded-3xl p-6 ${plan.color} ${plan.textColor} ${
-                    plan.current ? "ring-2 ring-foreground ring-offset-2 ring-offset-background" : ""
-                  }`}
-                >
-                  {plan.current && (
-                    <div className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-card/20 px-2 py-0.5 text-xs font-medium">
-                      <Zap className="h-3 w-3" />
-                      Current
-                    </div>
-                  )}
-                  
-                  <h3 className="text-xl font-bold">{plan.name}</h3>
-                  <p className="mt-1 text-sm opacity-70">{plan.description}</p>
-                  <p className="mt-4 text-4xl font-bold">
-                    {plan.price}
-                    <span className="text-lg font-normal opacity-70">/mo</span>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-foreground">Your Plan</h2>
+              <Button variant="ghost" className="gap-1 rounded-full" asChild>
+                <Link href="/pricing">
+                  Upgrade
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+            
+            <div className={`relative overflow-hidden rounded-3xl p-6 ${getPlanColor(user?.plan || "free")}`}>
+              <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-card/10" />
+              <div className="relative flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    {user?.plan === "professional" ? (
+                      <Crown className="h-6 w-6" />
+                    ) : user?.plan === "student" ? (
+                      <Zap className="h-6 w-6" />
+                    ) : (
+                      <Star className="h-6 w-6" />
+                    )}
+                    <h3 className="text-2xl font-bold">{getPlanLabel(user?.plan || "free")}</h3>
+                  </div>
+                  <p className="mt-1 opacity-70">
+                    {user?.plan === "professional" 
+                      ? "Unlimited access to all features"
+                      : user?.plan === "student"
+                        ? "Great for students"
+                        : "Basic access to tutors"}
                   </p>
-                  
-                  <ul className="mt-4 space-y-2">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-center gap-2 text-sm">
-                        <Check className="h-4 w-4" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  
-                  {!plan.current && (
-                    <Button
-                      className={`mt-6 w-full rounded-full ${
-                        plan.name === "Professional" 
-                          ? "bg-accent-foreground text-accent hover:bg-accent-foreground/90" 
-                          : "bg-foreground text-card hover:bg-foreground/90"
-                      }`}
-                    >
-                      {plan.name === "Free" ? "Downgrade" : "Upgrade"}
-                    </Button>
-                  )}
-                </motion.div>
-              ))}
+                </div>
+                {user?.plan !== "professional" && (
+                  <Button
+                    className="rounded-full bg-card text-foreground hover:bg-card/90"
+                    asChild
+                  >
+                    <Link href="/pricing">Upgrade</Link>
+                  </Button>
+                )}
+              </div>
             </div>
           </motion.section>
           
@@ -215,10 +418,10 @@ export default function ProfilePage() {
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="mb-12"
+            transition={{ delay: 0.6 }}
+            className="mb-8"
           >
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-foreground">Achievements</h2>
               <Button variant="ghost" className="gap-1 rounded-full">
                 View all
@@ -232,7 +435,8 @@ export default function ProfilePage() {
                   key={achievement.name}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.6 + i * 0.1 }}
+                  transition={{ delay: 0.7 + i * 0.1 }}
+                  whileHover={{ x: 4 }}
                   className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4"
                 >
                   <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${
@@ -251,7 +455,7 @@ export default function ProfilePage() {
                           className="h-full rounded-full bg-accent"
                           initial={{ width: 0 }}
                           animate={{ width: `${achievement.progress}%` }}
-                          transition={{ delay: 0.8 + i * 0.1, duration: 0.8 }}
+                          transition={{ delay: 0.9 + i * 0.1, duration: 0.8 }}
                         />
                       </div>
                       <span className="text-xs font-medium text-muted-foreground">
@@ -268,9 +472,9 @@ export default function ProfilePage() {
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
+            transition={{ delay: 0.8 }}
           >
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-foreground">Saved Tutors</h2>
               <Button variant="ghost" className="gap-1 rounded-full" asChild>
                 <Link href="/tutors">
@@ -286,7 +490,7 @@ export default function ProfilePage() {
                   key={tutor.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.8 + i * 0.05 }}
+                  transition={{ delay: 0.9 + i * 0.05 }}
                   whileHover={{ y: -5 }}
                   className="group relative aspect-[3/4] overflow-hidden rounded-2xl"
                 >
@@ -296,6 +500,9 @@ export default function ProfilePage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 to-transparent" />
                   <div className="absolute bottom-3 left-3 right-3">
+                    <span className="mb-1 inline-block rounded-full bg-accent/80 px-2 py-0.5 text-xs text-accent-foreground">
+                      {tutor.persona}
+                    </span>
                     <p className="font-semibold text-card">{tutor.name}</p>
                     <div className="mt-1 flex items-center gap-1 text-xs text-card/70">
                       <Star className="h-3 w-3 fill-accent text-accent" />

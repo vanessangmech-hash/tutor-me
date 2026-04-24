@@ -6,7 +6,7 @@ import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import { AuthModal } from "@/components/auth-modal"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Users, Globe, Sparkles, Heart } from "lucide-react"
+import { ArrowRight, Users, Globe, Sparkles, Heart, Rocket, Brain } from "lucide-react"
 
 const team = [
   {
@@ -37,24 +37,24 @@ const team = [
 
 const values = [
   {
-    icon: Sparkles,
-    title: "Innovation First",
-    description: "We push the boundaries of what's possible in AI-powered education."
+    icon: Brain,
+    title: "Learn Your Way",
+    description: "Every learner is unique. Our AI adapts to your pace, style, and vibe."
   },
   {
     icon: Users,
-    title: "Community Driven",
-    description: "Learning is better together. We build for collaboration."
+    title: "Better Together",
+    description: "Learning with friends hits different. Create rooms and grow together."
   },
   {
-    icon: Globe,
-    title: "Accessible to All",
-    description: "Quality education should be available to everyone, everywhere."
+    icon: Sparkles,
+    title: "AI That Gets You",
+    description: "Our tutors understand how you learn and reinforce what works for you."
   },
   {
     icon: Heart,
-    title: "Student Centered",
-    description: "Every decision we make starts with the learner in mind."
+    title: "Always Supportive",
+    description: "No judgment, just encouragement. Your AI tutor is always in your corner."
   }
 ]
 
@@ -76,22 +76,33 @@ export default function AboutPage() {
       <main className="px-6 pb-20 pt-32 lg:px-12">
         {/* Hero */}
         <section className="mx-auto max-w-4xl text-center">
+          <motion.span
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="inline-block rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground"
+          >
+            Our Mission
+          </motion.span>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-4xl font-bold tracking-tight text-foreground lg:text-6xl"
+            transition={{ delay: 0.1 }}
+            className="mt-6 text-4xl font-bold tracking-tight text-foreground lg:text-6xl"
           >
             Making learning{" "}
-            <span className="italic">personal</span> again
+            <span className="italic">personal</span> and{" "}
+            <span className="italic">fun</span>
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            transition={{ delay: 0.2 }}
             className="mt-6 text-xl text-muted-foreground"
           >
             We believe everyone deserves a tutor who understands exactly how they learn. 
-            That's why we built LearnSync - AI tutors that adapt to you.
+            That&apos;s why we built Tutor Me - customizable AI tutors that adapt to you. 
+            Invite your friends, create your own room, and learn together with an AI that 
+            reinforces and adapts to your style.
           </motion.p>
         </section>
         
@@ -99,7 +110,7 @@ export default function AboutPage() {
         <motion.section
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.3 }}
           className="mx-auto mt-20 max-w-5xl"
         >
           <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
@@ -108,7 +119,8 @@ export default function AboutPage() {
                 key={stat.label}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3 + i * 0.1 }}
+                transition={{ delay: 0.4 + i * 0.1 }}
+                whileHover={{ scale: 1.05, y: -2 }}
                 className="rounded-3xl bg-foreground p-8 text-center text-card"
               >
                 <p className="text-4xl font-bold lg:text-5xl">{stat.value}</p>
@@ -125,21 +137,35 @@ export default function AboutPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl font-bold text-foreground">Our Story</h2>
-            <div className="mt-6 space-y-4 text-lg text-muted-foreground">
+            <div className="mb-6 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent">
+                <Rocket className="h-6 w-6 text-accent-foreground" />
+              </div>
+              <h2 className="text-3xl font-bold text-foreground">Our Story</h2>
+            </div>
+            <div className="space-y-4 text-lg text-muted-foreground">
               <p>
-                LearnSync started in a Stanford dorm room in 2023, when our founders realized 
-                that the most effective learning happens one-on-one with a great tutor - but 
-                that experience was inaccessible to most people.
+                Tutor Me started at a hackathon in 2024, where our founders shared a common frustration: 
+                traditional tutoring was expensive, impersonal, and didn&apos;t fit how they actually learned.
               </p>
               <p>
-                We asked ourselves: what if AI could be that tutor? Not a replacement for human 
-                connection, but a complement - available 24/7, infinitely patient, and perfectly 
-                adapted to each learner's unique style.
+                We asked ourselves: what if you could have a personal AI tutor that <span className="font-medium text-foreground">actually gets you</span>? 
+                Not just answers questions, but understands your learning style, speaks your language 
+                (yes, even Gen Z slang), and adapts to what works best for you.
               </p>
               <p>
-                Today, LearnSync helps over 2 million learners worldwide master everything from 
-                calculus to coding, languages to leadership. And we're just getting started.
+                We built Tutor Me as a virtual space where you can talk to AI agents that feel like 
+                real tutors. Each user can join existing rooms or customize their own persona - whether 
+                you want a hype coach, a chill professor, or someone who explains things like your coolest friend.
+              </p>
+              <p>
+                The best part? <span className="font-medium text-foreground">You can learn with your friends</span>. 
+                Create a room, invite your study group, and let your AI tutor guide everyone. 
+                Our AI uses reinforced learning to understand what clicks with your group and adjusts in real-time.
+              </p>
+              <p>
+                Today, over 2 million learners worldwide use Tutor Me to master everything from calculus 
+                to coding, languages to leadership. And we&apos;re just getting started.
               </p>
             </div>
           </motion.div>
@@ -147,14 +173,17 @@ export default function AboutPage() {
         
         {/* Values */}
         <section className="mx-auto mt-32 max-w-5xl">
-          <motion.h2
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="mb-12 text-center text-3xl font-bold text-foreground"
+            className="mb-12 text-center"
           >
-            Our Values
-          </motion.h2>
+            <span className="inline-block rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground">
+              What We Believe
+            </span>
+            <h2 className="mt-4 text-3xl font-bold text-foreground">Our Values</h2>
+          </motion.div>
           
           <div className="grid gap-6 md:grid-cols-2">
             {values.map((value, i) => (
@@ -164,11 +193,15 @@ export default function AboutPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
+                whileHover={{ y: -4 }}
                 className="rounded-3xl border border-border bg-card p-8"
               >
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent">
+                <motion.div 
+                  className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent"
+                  whileHover={{ rotate: 10, scale: 1.1 }}
+                >
                   <value.icon className="h-7 w-7 text-accent-foreground" />
-                </div>
+                </motion.div>
                 <h3 className="text-xl font-bold text-foreground">{value.title}</h3>
                 <p className="mt-2 text-muted-foreground">{value.description}</p>
               </motion.div>
@@ -178,14 +211,18 @@ export default function AboutPage() {
         
         {/* Team */}
         <section className="mx-auto mt-32 max-w-5xl">
-          <motion.h2
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="mb-12 text-center text-3xl font-bold text-foreground"
+            className="mb-12 text-center"
           >
-            Meet the Team
-          </motion.h2>
+            <span className="inline-block rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground">
+              The Crew
+            </span>
+            <h2 className="mt-4 text-3xl font-bold text-foreground">Meet the Team</h2>
+            <p className="mt-2 text-muted-foreground">The people making learning personal again</p>
+          </motion.div>
           
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {team.map((member, i) => (
@@ -216,17 +253,25 @@ export default function AboutPage() {
           </div>
         </section>
         
-        {/* CTA */}
+        {/* CTA - Join Our Mission */}
         <motion.section
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           className="mx-auto mt-32 max-w-3xl text-center"
         >
-          <div className="rounded-3xl bg-foreground p-12 text-card">
+          <div className="overflow-hidden rounded-3xl bg-foreground p-12 text-card">
+            <motion.div
+              className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent"
+              animate={{ rotate: [0, 5, -5, 0] }}
+              transition={{ repeat: Infinity, duration: 4 }}
+            >
+              <Globe className="h-8 w-8 text-accent-foreground" />
+            </motion.div>
             <h2 className="text-3xl font-bold">Join our mission</h2>
             <p className="mt-4 text-card/70">
-              We're always looking for passionate people to help us transform education.
+              We&apos;re building the future of personalized education. Whether you want to learn, 
+              teach, or help us build - there&apos;s a place for you.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button

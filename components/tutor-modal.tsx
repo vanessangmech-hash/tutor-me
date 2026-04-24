@@ -147,6 +147,24 @@ export function TutorModal({ tutor, onClose }: TutorModalProps) {
                 </div>
               </motion.div>
               
+              {/* Persona */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+                className="mb-6 rounded-2xl bg-accent/10 p-4"
+              >
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="rounded-full bg-accent px-3 py-0.5 text-xs font-semibold text-accent-foreground">
+                    {tutor.persona}
+                  </span>
+                  <span className="text-sm text-muted-foreground">Persona</span>
+                </div>
+                <p className="italic text-foreground">
+                  &ldquo;{tutor.personality}&rdquo;
+                </p>
+              </motion.div>
+
               {/* Description */}
               <motion.p
                 initial={{ opacity: 0 }}
