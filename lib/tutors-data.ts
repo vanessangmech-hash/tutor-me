@@ -84,7 +84,7 @@ export const tutors: Tutor[] = [
     id: "5",
     name: "SpanishSlay",
     subject: "Spanish",
-    thumbnail: "https://images.unsplash.com/photo-1489945052260-4f21c52571bf?w=400&h=600&fit=crop",
+    thumbnail: "/images/spanish-slay.jpg",
     views: "167K",
     saves: 3210,
     tags: ["Languages", "Conversational", "Beginner"],
@@ -94,7 +94,7 @@ export const tutors: Tutor[] = [
     sessions: 16700,
     persona: "Latina Tia Energy",
     personality: "Mijo/Mija, we're gonna have you speaking like a native in no time! Come on, repeat after me... perfecto!",
-    videoPreview: "https://images.unsplash.com/photo-1489945052260-4f21c52571bf?w=800&h=450&fit=crop"
+    videoPreview: "/images/spanish-slay.jpg"
   },
   {
     id: "6",

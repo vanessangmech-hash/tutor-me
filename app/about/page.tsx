@@ -89,9 +89,36 @@ export default function AboutPage() {
             transition={{ delay: 0.1 }}
             className="mt-6 text-4xl font-bold tracking-tight text-foreground lg:text-6xl"
           >
-            Making learning{" "}
-            <span className="italic">personal</span> and{" "}
-            <span className="italic">fun</span>
+            {"Making learning ".split("").map((char, i) => (
+              <motion.span
+                key={i}
+                className="inline-block"
+                animate={{ y: [0, -6, 0] }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 2,
+                  delay: i * 0.04,
+                  ease: "easeInOut",
+                }}
+              >
+                {char === " " ? "\u00A0" : char}
+              </motion.span>
+            ))}
+            <motion.span 
+              className="italic"
+              animate={{ scale: [1, 1.05, 1], rotate: [0, 2, -2, 0] }}
+              transition={{ repeat: Infinity, duration: 3 }}
+            >
+              personal
+            </motion.span>
+            {" and "}
+            <motion.span 
+              className="italic"
+              animate={{ scale: [1, 1.05, 1], rotate: [0, -2, 2, 0] }}
+              transition={{ repeat: Infinity, duration: 3, delay: 0.5 }}
+            >
+              fun
+            </motion.span>
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -117,14 +144,32 @@ export default function AboutPage() {
             {stats.map((stat, i) => (
               <motion.div
                 key={stat.label}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, scale: 0.9, rotateY: -20 }}
+                animate={{ opacity: 1, scale: 1, rotateY: 0 }}
                 transition={{ delay: 0.4 + i * 0.1 }}
-                whileHover={{ scale: 1.05, y: -2 }}
+                whileHover={{ 
+                  scale: 1.08, 
+                  y: -8,
+                  rotateY: 10,
+                  boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)"
+                }}
                 className="rounded-3xl bg-foreground p-8 text-center text-card"
+                style={{ transformStyle: "preserve-3d", perspective: 1000 }}
               >
-                <p className="text-4xl font-bold lg:text-5xl">{stat.value}</p>
-                <p className="mt-2 text-card/70">{stat.label}</p>
+                <motion.p 
+                  className="text-4xl font-bold lg:text-5xl"
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ repeat: Infinity, duration: 2, delay: i * 0.2 }}
+                >
+                  {stat.value}
+                </motion.p>
+                <motion.p 
+                  className="mt-2 text-card/70"
+                  animate={{ opacity: [0.7, 1, 0.7] }}
+                  transition={{ repeat: Infinity, duration: 3, delay: i * 0.3 }}
+                >
+                  {stat.label}
+                </motion.p>
               </motion.div>
             ))}
           </div>
@@ -189,20 +234,41 @@ export default function AboutPage() {
             {values.map((value, i) => (
               <motion.div
                 key={value.title}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 30, rotateX: -15 }}
+                whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                whileHover={{ y: -4 }}
+                whileHover={{ 
+                  y: -8, 
+                  scale: 1.03,
+                  rotateY: 5,
+                  boxShadow: "0 20px 40px -10px rgba(0,0,0,0.15)"
+                }}
                 className="rounded-3xl border border-border bg-card p-8"
+                style={{ transformStyle: "preserve-3d", perspective: 1000 }}
               >
                 <motion.div 
                   className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent"
                   whileHover={{ rotate: 10, scale: 1.1 }}
+                  animate={{ 
+                    y: [0, -5, 0],
+                    rotate: [0, 3, -3, 0]
+                  }}
+                  transition={{ 
+                    repeat: Infinity, 
+                    duration: 3 + i * 0.5,
+                    ease: "easeInOut"
+                  }}
                 >
                   <value.icon className="h-7 w-7 text-accent-foreground" />
                 </motion.div>
-                <h3 className="text-xl font-bold text-foreground">{value.title}</h3>
+                <motion.h3 
+                  className="text-xl font-bold text-foreground"
+                  animate={{ scale: [1, 1.02, 1] }}
+                  transition={{ repeat: Infinity, duration: 2, delay: i * 0.2 }}
+                >
+                  {value.title}
+                </motion.h3>
                 <p className="mt-2 text-muted-foreground">{value.description}</p>
               </motion.div>
             ))}
@@ -228,12 +294,18 @@ export default function AboutPage() {
             {team.map((member, i) => (
               <motion.div
                 key={member.name}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 30, rotateY: -15 }}
+                whileInView={{ opacity: 1, y: 0, rotateY: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                whileHover={{ y: -5 }}
+                whileHover={{ 
+                  y: -10, 
+                  scale: 1.03,
+                  rotateY: 5,
+                  boxShadow: "0 25px 50px -12px rgba(0,0,0,0.2)"
+                }}
                 className="group overflow-hidden rounded-3xl border border-border bg-card"
+                style={{ transformStyle: "preserve-3d", perspective: 1000 }}
               >
                 <div className="relative h-48 overflow-hidden">
                   <Image
@@ -242,9 +314,21 @@ export default function AboutPage() {
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
                   />
+                  {/* Floating overlay effect */}
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-t from-accent/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100"
+                    animate={{ opacity: [0, 0.3, 0] }}
+                    transition={{ repeat: Infinity, duration: 3, delay: i * 0.3 }}
+                  />
                 </div>
                 <div className="p-5">
-                  <h3 className="font-bold text-foreground">{member.name}</h3>
+                  <motion.h3 
+                    className="font-bold text-foreground"
+                    animate={{ x: [0, 2, 0] }}
+                    transition={{ repeat: Infinity, duration: 3, delay: i * 0.2 }}
+                  >
+                    {member.name}
+                  </motion.h3>
                   <p className="text-sm text-accent">{member.role}</p>
                   <p className="mt-2 text-sm text-muted-foreground">{member.bio}</p>
                 </div>
