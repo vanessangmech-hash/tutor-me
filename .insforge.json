@@ -1,0 +1,94 @@
+{
+  "project": {
+    "name": "tutor-me",
+    "description": "AI-powered tutoring platform with personalized learning",
+    "version": "1.0.0"
+  },
+  "functions": {
+    "functions_directory": "backend/functions",
+    "runtime": "deno",
+    "auto_deploy": true
+  },
+  "environment": {
+    "variables": [
+      {
+        "name": "AKASHML_API_KEY",
+        "description": "AkashML API key for chat completions",
+        "required": true
+      },
+      {
+        "name": "GHOST_CONNECTION_STRING",
+        "description": "PostgreSQL connection string for conversation context",
+        "required": true
+      },
+      {
+        "name": "INSFORGE_BASE_URL",
+        "description": "Insforge backend URL",
+        "required": true
+      },
+      {
+        "name": "ANON_KEY",
+        "description": "Insforge anonymous JWT key",
+        "required": true
+      },
+      {
+        "name": "TINYFISH_BASE_URL",
+        "description": "TinyFish API base URL",
+        "required": false,
+        "default": "https://api.tinyfish.ai/v1"
+      },
+      {
+        "name": "TINYFISH_API_KEY",
+        "description": "TinyFish API key for web research",
+        "required": true
+      }
+    ]
+  },
+  "functions_config": {
+    "chat-handler": {
+      "description": "Handle chat messages with AkashML LLM",
+      "timeout": 30000,
+      "memory": 512
+    },
+    "persona-manager": {
+      "description": "Manage tutoring personas",
+      "timeout": 10000,
+      "memory": 256
+    },
+    "room-manager": {
+      "description": "Manage tutoring rooms",
+      "timeout": 10000,
+      "memory": 256
+    },
+    "room-join": {
+      "description": "Handle room join/leave operations",
+      "timeout": 5000,
+      "memory": 256
+    },
+    "learning-adapter": {
+      "description": "Analyze and adapt to student learning style",
+      "timeout": 15000,
+      "memory": 256
+    },
+    "reward-handler": {
+      "description": "Grant rewards and track student progress",
+      "timeout": 5000,
+      "memory": 256
+    },
+    "web-research": {
+      "description": "Perform web research for chat context",
+      "timeout": 20000,
+      "memory": 512
+    }
+  },
+  "database": {
+    "type": "postgresql",
+    "connection_env": "GHOST_CONNECTION_STRING",
+    "tables": [
+      "conversation_context",
+      "topic_embeddings",
+      "research_cache",
+      "call_research_log"
+    ]
+  }
+}
