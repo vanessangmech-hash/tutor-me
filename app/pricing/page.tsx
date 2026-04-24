@@ -127,11 +127,29 @@ export default function PricingPage() {
               Pricing
             </motion.span>
             <h1 className="mt-6 text-4xl font-bold tracking-tight text-foreground lg:text-5xl">
-              Simple, transparent pricing
+              {"Simple, transparent pricing".split("").map((char, i) => (
+                <motion.span
+                  key={i}
+                  className="inline-block"
+                  animate={{ y: [0, -5, 0] }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 2,
+                    delay: i * 0.03,
+                    ease: "easeInOut",
+                  }}
+                >
+                  {char === " " ? "\u00A0" : char}
+                </motion.span>
+              ))}
             </h1>
-            <p className="mt-4 text-lg text-muted-foreground">
+            <motion.p 
+              className="mt-4 text-lg text-muted-foreground"
+              animate={{ opacity: [0.7, 1, 0.7] }}
+              transition={{ repeat: Infinity, duration: 3 }}
+            >
               Choose the plan that fits your learning journey
-            </p>
+            </motion.p>
             
             {/* Billing Toggle */}
             <div className="mt-8 flex items-center justify-center gap-4">
@@ -162,16 +180,34 @@ export default function PricingPage() {
             {plans.map((plan, i) => (
               <motion.div
                 key={plan.name}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 30, rotateX: -15 }}
+                animate={{ opacity: 1, y: 0, rotateX: 0 }}
                 transition={{ delay: i * 0.1, duration: 0.5 }}
-                whileHover={{ y: -4 }}
+                whileHover={{ 
+                  y: -10, 
+                  scale: 1.03,
+                  rotateY: 5,
+                  boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)"
+                }}
                 className={`relative overflow-hidden rounded-3xl border p-8 ${plan.bgColor} ${plan.borderColor}`}
+                style={{ transformStyle: "preserve-3d", perspective: 1000 }}
               >
+                {/* Floating particles */}
+                <motion.div
+                  className="absolute right-10 top-20 h-3 w-3 rounded-full bg-accent/40"
+                  animate={{ y: [0, -15, 0], x: [0, 5, 0] }}
+                  transition={{ repeat: Infinity, duration: 3, delay: i * 0.2 }}
+                />
+                <motion.div
+                  className="absolute left-8 bottom-20 h-2 w-2 rounded-full bg-foreground/20"
+                  animate={{ y: [0, -10, 0], x: [0, -5, 0] }}
+                  transition={{ repeat: Infinity, duration: 2.5, delay: i * 0.3 }}
+                />
+
                 {plan.popular && (
                   <motion.div 
                     className="absolute right-4 top-4 rounded-full bg-foreground px-3 py-1 text-xs font-semibold text-card"
-                    animate={{ scale: [1, 1.05, 1] }}
+                    animate={{ scale: [1, 1.08, 1], rotate: [0, 2, -2, 0] }}
                     transition={{ repeat: Infinity, duration: 2 }}
                   >
                     Most Popular
@@ -183,22 +219,41 @@ export default function PricingPage() {
                     plan.popular ? "bg-foreground/10" : "bg-foreground/5"
                   }`}
                   whileHover={{ rotate: 10, scale: 1.1 }}
+                  animate={{ 
+                    y: [0, -5, 0],
+                    rotate: [0, 3, -3, 0]
+                  }}
+                  transition={{ 
+                    repeat: Infinity, 
+                    duration: 3 + i * 0.5,
+                    ease: "easeInOut"
+                  }}
                 >
                   <plan.icon className="h-7 w-7 text-foreground" />
                 </motion.div>
                 
-                <h3 className={`text-2xl font-bold ${plan.textColor}`}>{plan.name}</h3>
+                <motion.h3 
+                  className={`text-2xl font-bold ${plan.textColor}`}
+                  animate={{ scale: [1, 1.02, 1] }}
+                  transition={{ repeat: Infinity, duration: 2, delay: i * 0.2 }}
+                >
+                  {plan.name}
+                </motion.h3>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {plan.description}
                 </p>
                 
                 <div className="mt-6">
-                  <span className="text-5xl font-bold text-foreground">
+                  <motion.span 
+                    className="text-5xl font-bold text-foreground"
+                    animate={{ scale: [1, 1.03, 1] }}
+                    transition={{ repeat: Infinity, duration: 3, delay: i * 0.3 }}
+                  >
                     {billingCycle === "yearly" 
                       ? `$${Math.floor(parseInt(plan.price.slice(1)) * 0.8 * 12)}`
                       : plan.price
                     }
-                  </span>
+                  </motion.span>
                   <span className="text-lg text-muted-foreground">
                     /{billingCycle === "yearly" ? "year" : "month"}
                   </span>
@@ -236,25 +291,44 @@ export default function PricingPage() {
             transition={{ delay: 0.4 }}
           >
             <div className="mb-8 text-center">
-              <span className="inline-block rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground">
+              <motion.span 
+                className="inline-block rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground"
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+              >
                 FAQ
-              </span>
-              <h2 className="mt-4 text-3xl font-bold text-foreground">
+              </motion.span>
+              <motion.h2 
+                className="mt-4 text-3xl font-bold text-foreground"
+                animate={{ scale: [1, 1.01, 1] }}
+                transition={{ repeat: Infinity, duration: 3 }}
+              >
                 Frequently asked questions
-              </h2>
+              </motion.h2>
             </div>
             
             <div className="mx-auto max-w-3xl space-y-4">
               {faqs.map((faq, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, y: 20, x: -10 }}
+                  animate={{ opacity: 1, y: 0, x: 0 }}
                   transition={{ delay: 0.5 + i * 0.1 }}
-                  whileHover={{ x: 4 }}
+                  whileHover={{ 
+                    x: 8, 
+                    scale: 1.02,
+                    boxShadow: "0 10px 30px -10px rgba(0,0,0,0.15)"
+                  }}
                   className="rounded-2xl border border-border bg-card p-6"
+                  style={{ transformStyle: "preserve-3d" }}
                 >
-                  <h3 className="font-semibold text-foreground">{faq.question}</h3>
+                  <motion.h3 
+                    className="font-semibold text-foreground"
+                    animate={{ x: [0, 2, 0] }}
+                    transition={{ repeat: Infinity, duration: 4, delay: i * 0.3 }}
+                  >
+                    {faq.question}
+                  </motion.h3>
                   <p className="mt-2 text-muted-foreground">{faq.answer}</p>
                 </motion.div>
               ))}

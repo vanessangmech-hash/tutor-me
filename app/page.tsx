@@ -107,19 +107,46 @@ function AnimatedTutor() {
         <div className="absolute -left-2 top-4 h-4 w-4 rotate-45 bg-card ring-1 ring-border" />
       </motion.div>
 
-      {/* Main 3D image - using Sapforce style blob */}
-      <Image
-        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-3NVZZ0ZPWbGquB40GfvtLltE94MYmA.png"
-        alt="3D AI Tutor"
-        fill
-        className="object-contain drop-shadow-2xl"
-        priority
+      {/* Main 3D cartoon tutor image - pops off the page */}
+      <motion.div
+        className="absolute inset-0"
+        animate={{ 
+          scale: [1, 1.02, 1],
+          rotateZ: [0, 1, -1, 0]
+        }}
+        transition={{ 
+          repeat: Infinity, 
+          duration: 4, 
+          ease: "easeInOut" 
+        }}
+      >
+        <Image
+          src="/images/3d-tutor.jpg"
+          alt="3D AI Tutor"
+          fill
+          className="object-contain drop-shadow-2xl"
+          style={{ 
+            filter: "drop-shadow(0 25px 50px rgba(0,0,0,0.25))",
+            transform: "translateZ(50px)"
+          }}
+          priority
+        />
+      </motion.div>
+      
+      {/* Glow effect behind tutor */}
+      <motion.div
+        className="absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/30 blur-3xl"
+        animate={{ 
+          scale: [1, 1.2, 1],
+          opacity: [0.3, 0.5, 0.3]
+        }}
+        transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
       />
     </motion.div>
   )
 }
 
-// Walking tutor animation on scroll
+// Walking tutor animation on scroll - smaller and more subtle
 function WalkingTutor() {
   const { scrollYProgress } = useScroll()
   const x = useTransform(scrollYProgress, [0.1, 0.4], ["-100%", "100%"])
@@ -127,19 +154,19 @@ function WalkingTutor() {
   
   return (
     <motion.div
-      className="pointer-events-none fixed bottom-10 left-0 z-30 h-32 w-32"
+      className="pointer-events-none fixed bottom-6 left-0 z-30 h-16 w-16"
       style={{ x, rotate }}
     >
       <motion.div
-        animate={{ y: [0, -5, 0] }}
+        animate={{ y: [0, -3, 0] }}
         transition={{ repeat: Infinity, duration: 0.5 }}
         className="relative h-full w-full"
       >
         <div className="flex h-full w-full items-center justify-center rounded-full bg-accent shadow-lg">
-          <Sparkles className="h-12 w-12 text-accent-foreground" />
+          <Sparkles className="h-6 w-6 text-accent-foreground" />
         </div>
         <motion.div
-          className="absolute -right-2 -top-2 rounded-lg bg-card px-2 py-1 text-xs font-bold shadow-md"
+          className="absolute -right-1 -top-1 rounded-md bg-card px-1.5 py-0.5 text-[10px] font-bold shadow-md"
           animate={{ scale: [1, 1.1, 1] }}
           transition={{ repeat: Infinity, duration: 1 }}
         >
@@ -173,33 +200,34 @@ function AnimatedCounter({ value, suffix = "" }: { value: number; suffix?: strin
   return <span ref={ref}>0{suffix}</span>
 }
 
-// Masterpiece card gallery with spread effect
+// Masterpiece card gallery with wider spread effect
 function MasterpieceGallery() {
   const cards = tutors.slice(0, 7)
   const containerRef = useRef<HTMLDivElement>(null)
   const isInView = useInView(containerRef, { once: true, margin: "-100px" })
 
   return (
-    <div ref={containerRef} className="relative flex h-[500px] items-center justify-center">
+    <div ref={containerRef} className="relative flex h-[550px] items-center justify-center overflow-visible py-10">
       {cards.map((tutor, i) => {
         const totalCards = cards.length
         const middleIndex = (totalCards - 1) / 2
         const offset = i - middleIndex
-        const rotation = offset * 15
-        const translateX = offset * 90
-        const translateY = Math.abs(offset) * 20
+        const rotation = offset * 12
+        const translateX = offset * 130 // More spread out
+        const translateY = Math.abs(offset) * 15
         const zIndex = totalCards - Math.abs(offset)
 
         return (
           <motion.div
             key={tutor.id}
             className="absolute h-72 w-52 cursor-pointer overflow-hidden rounded-3xl bg-card shadow-2xl"
-            initial={{ opacity: 0, y: 100, rotate: 0, x: 0 }}
+            initial={{ opacity: 0, y: 100, rotate: 0, x: 0, scale: 0.8 }}
             animate={isInView ? { 
               opacity: 1, 
               y: translateY, 
               rotate: rotation,
-              x: translateX
+              x: translateX,
+              scale: 1
             } : {}}
             transition={{ 
               delay: i * 0.08, 
@@ -207,23 +235,34 @@ function MasterpieceGallery() {
               ease: [0.22, 1, 0.36, 1] 
             }}
             whileHover={{ 
-              scale: 1.15, 
+              scale: 1.2, 
               rotate: 0, 
-              y: -30,
+              y: -40,
               zIndex: 20,
               transition: { duration: 0.3 }
             }}
             style={{ zIndex }}
           >
-            <div
-              className="h-full w-full bg-cover bg-center"
-              style={{ backgroundImage: `url(${tutor.thumbnail})` }}
-            />
+            {/* Floating animation on each card */}
+            <motion.div
+              className="h-full w-full"
+              animate={{ y: [0, -5, 0] }}
+              transition={{ repeat: Infinity, duration: 2 + i * 0.2, ease: "easeInOut" }}
+            >
+              <div
+                className="h-full w-full bg-cover bg-center"
+                style={{ backgroundImage: `url(${tutor.thumbnail})` }}
+              />
+            </motion.div>
             <div className="absolute inset-0 bg-gradient-to-t from-foreground/90 via-transparent to-transparent" />
             <div className="absolute bottom-4 left-4 right-4">
-              <span className="mb-1 inline-block rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
+              <motion.span 
+                className="mb-1 inline-block rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground"
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+              >
                 {tutor.persona}
-              </span>
+              </motion.span>
               <p className="text-lg font-bold text-white">{tutor.name}</p>
               <p className="text-sm text-white/70">{tutor.subject}</p>
             </div>
@@ -276,19 +315,40 @@ function CreateRoomSection() {
           {features.map((feature, i) => (
             <motion.div
               key={feature.title}
-              initial={{ opacity: 0, y: 30 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              initial={{ opacity: 0, y: 30, rotateX: -15 }}
+              animate={isInView ? { opacity: 1, y: 0, rotateX: 0 } : {}}
               transition={{ delay: 0.2 + i * 0.1, duration: 0.5 }}
-              whileHover={{ y: -5, scale: 1.02 }}
+              whileHover={{ 
+                y: -10, 
+                scale: 1.05,
+                rotateY: 5,
+                boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)"
+              }}
               className="group rounded-3xl bg-card/10 p-6 backdrop-blur-sm transition-colors hover:bg-card/15"
+              style={{ transformStyle: "preserve-3d", perspective: 1000 }}
             >
               <motion.div
                 className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent"
                 whileHover={{ rotate: 10, scale: 1.1 }}
+                animate={{ 
+                  y: [0, -5, 0],
+                  rotate: [0, 3, -3, 0]
+                }}
+                transition={{ 
+                  repeat: Infinity, 
+                  duration: 3 + i * 0.5,
+                  ease: "easeInOut"
+                }}
               >
                 <feature.icon className="h-7 w-7 text-accent-foreground" />
               </motion.div>
-              <h3 className="text-xl font-bold text-card">{feature.title}</h3>
+              <motion.h3 
+                className="text-xl font-bold text-card"
+                animate={{ scale: [1, 1.02, 1] }}
+                transition={{ repeat: Infinity, duration: 2, delay: i * 0.2 }}
+              >
+                {feature.title}
+              </motion.h3>
               <p className="mt-2 text-card/70">{feature.desc}</p>
             </motion.div>
           ))}
@@ -305,7 +365,7 @@ function CreateRoomSection() {
             className="gap-2 rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
             asChild
           >
-            <Link href="/rooms">
+            <Link href="/create">
               Create a Room
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -601,14 +661,28 @@ export default function HomePage() {
         style={{ opacity: heroOpacity, scale: heroScale }}
         className="relative min-h-screen overflow-hidden pt-32"
       >
-        {/* Giant typography background */}
+        {/* Giant typography background with bounce */}
         <motion.h1
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
           className="pointer-events-none absolute left-1/2 top-20 -translate-x-1/2 whitespace-nowrap text-[14vw] font-black tracking-tighter text-foreground/[0.04] lg:text-[200px]"
         >
-          TUTOR ME.
+          {"TUTOR ME.".split("").map((char, i) => (
+            <motion.span
+              key={i}
+              className="inline-block"
+              animate={{ y: [0, -8, 0] }}
+              transition={{ 
+                repeat: Infinity, 
+                duration: 2,
+                delay: i * 0.1,
+                ease: "easeInOut"
+              }}
+            >
+              {char === " " ? "\u00A0" : char}
+            </motion.span>
+          ))}
         </motion.h1>
 
         <div className="mx-auto max-w-7xl px-6">
@@ -744,31 +818,7 @@ export default function HomePage() {
             Explore tutor rooms, discover new learning styles, and find the perfect AI tutor that matches your energy.
           </motion.p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mt-8 flex items-center justify-center gap-4"
-          >
-            <Button
-              size="lg"
-              className="gap-2 rounded-full"
-              onClick={() => setShowAuth(true)}
-            >
-              Join for $9.99/m
-            </Button>
-            <Button
-              size="lg"
-              variant="ghost"
-              className="gap-1"
-              asChild
-            >
-              <Link href="/about">
-                Read more
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </motion.div>
+
         </div>
       </section>
 
