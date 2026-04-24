@@ -30,6 +30,14 @@ import {
   Loader2,
 } from "lucide-react"
 
+function RoomsLoadingFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" aria-label="Loading" />
+    </div>
+  )
+}
+
 function RoomCard({ room, index }: { room: ApiRoom; index: number }) {
   const persona = room.personas
   return (
@@ -166,7 +174,7 @@ function PersonaPickerModal({
 
 export default function RoomsPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<RoomsLoadingFallback />}>
       <RoomsPageContent />
     </Suspense>
   )

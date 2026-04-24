@@ -2,6 +2,16 @@
   "name": "my-project",
   "version": "0.1.0",
   "private": true,
+  "overrides": {
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "19.2.4",
+      "react-dom": "19.2.4"
+    }
+  },
   "scripts": {
     "dev": "next dev --webpack",
     "dev:turbo": "next dev --turbopack",
@@ -54,9 +64,9 @@
     "lucide-react": "^0.564.0",
     "next": "16.2.4",
     "next-themes": "^0.4.6",
-    "react": "^19",
+    "react": "19.2.4",
     "react-day-picker": "9.13.2",
-    "react-dom": "^19",
+    "react-dom": "19.2.4",
     "react-hook-form": "^7.54.1",
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.0",
