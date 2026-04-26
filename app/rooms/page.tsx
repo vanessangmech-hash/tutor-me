@@ -10,13 +10,40 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/auth-context"
 import {
-  createRoom,
-  joinRoom,
-  listActiveRooms,
   listPublicPersonas,
-  type Room as ApiRoom,
   type Persona,
 } from "@/lib/api"
+import type { PersonaConfig } from "@/types/classroom"
+
+function generateRoomCode(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("")
+}
+
+function storeRoomPersona(code: string, persona: PersonaConfig) {
+  try {
+    localStorage.setItem(`room-persona-${code}`, JSON.stringify(persona))
+    const existing: string[] = JSON.parse(localStorage.getItem("created-rooms") || "[]")
+    if (!existing.includes(code)) {
+      localStorage.setItem("created-rooms", JSON.stringify([...existing, code]))
+    }
+  } catch {}
+}
+
+async function checkRoomActive(code: string): Promise<boolean> {
+  try {
+    const host = process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999"
+    const protocol = host.startsWith("localhost") ? "http" : "https"
+    const res = await fetch(`${protocol}://${host}/parties/main/${code}`, {
+      signal: AbortSignal.timeout(3000),
+    })
+    if (!res.ok) return false
+    const data = await res.json()
+    return data.active === true
+  } catch {
+    return false
+  }
+}
 import {
   Plus,
   Users,
@@ -38,8 +65,7 @@ function RoomsLoadingFallback() {
   )
 }
 
-function RoomCard({ room, index }: { room: ApiRoom; index: number }) {
-  const persona = room.personas
+function LocalRoomCard({ code, persona, index }: { code: string; persona: PersonaConfig | null; index: number }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -47,7 +73,7 @@ function RoomCard({ room, index }: { room: ApiRoom; index: number }) {
       transition={{ delay: index * 0.1, duration: 0.5 }}
     >
       <Link
-        href={`/rooms/${room.id}`}
+        href={`/classroom/${code}`}
         className="group block overflow-hidden rounded-3xl border border-border bg-card transition-all duration-300 hover:border-foreground/20 hover:shadow-xl"
       >
         <div className="relative h-40 w-full overflow-hidden bg-gradient-to-br from-accent/30 to-accent/10">
@@ -55,29 +81,26 @@ function RoomCard({ room, index }: { room: ApiRoom; index: number }) {
             <BookOpen className="h-16 w-16 text-accent/40" />
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 to-transparent" />
-
-          {room.status === "active" && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-red-500 px-3 py-1.5 text-xs font-semibold text-white"
-            >
-              <Radio className="h-3 w-3 animate-pulse" />
-              Live
-            </motion.div>
-          )}
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-red-500 px-3 py-1.5 text-xs font-semibold text-white"
+          >
+            <Radio className="h-3 w-3 animate-pulse" />
+            Live
+          </motion.div>
         </div>
 
         <div className="p-5">
-          <h3 className="text-lg font-bold text-foreground transition-colors group-hover:text-foreground">
+          <h3 className="text-lg font-bold text-foreground">
             {persona?.name || "AI Tutor"} Room
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
             {persona?.subject || "General"}
           </p>
           <div className="mt-4 flex items-center justify-between">
-            <span className="rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-accent-foreground">
-              {room.room_code}
+            <span className="rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-accent-foreground font-mono">
+              {code}
             </span>
             <motion.div
               whileHover={{ x: 5 }}
@@ -90,6 +113,25 @@ function RoomCard({ room, index }: { room: ApiRoom; index: number }) {
       </Link>
     </motion.div>
   )
+}
+
+const DR_CHEN_DEFAULT: Persona = {
+  id: "demo-dr-chen",
+  creator_id: "system",
+  name: "Dr. Chen",
+  subject: "Chemistry",
+  system_prompt:
+    "You are Dr. Chen, an engaging chemistry professor. Adapt to the learner's style. Ask Socratic questions. Celebrate understanding.",
+  personality_traits: {
+    persona_label: "Engaging Professor",
+    personality: "Warm, encouraging, and methodical",
+  },
+  teaching_style: { approach: "socratic", detail_level: "moderate", encouragement: true },
+  is_public: true,
+  total_rewards: 0,
+  times_used: 0,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
 }
 
 function PersonaPickerModal({
@@ -114,6 +156,10 @@ function PersonaPickerModal({
   }, [isOpen])
 
   if (!isOpen) return null
+
+  const allPersonas = personas.some((p) => p.id === DR_CHEN_DEFAULT.id)
+    ? personas
+    : [DR_CHEN_DEFAULT, ...personas]
 
   return (
     <>
@@ -142,13 +188,9 @@ function PersonaPickerModal({
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : personas.length === 0 ? (
-              <p className="py-8 text-center text-muted-foreground">
-                No personas available yet. Seed tutors first.
-              </p>
             ) : (
               <div className="grid grid-cols-2 gap-3">
-                {personas.map((p) => (
+                {allPersonas.map((p) => (
                   <motion.button
                     key={p.id}
                     whileHover={{ scale: 1.03 }}
@@ -158,9 +200,15 @@ function PersonaPickerModal({
                   >
                     <p className="font-semibold text-foreground">{p.name}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{p.subject}</p>
-                    <span className="mt-2 inline-block rounded-full bg-accent/20 px-2 py-0.5 text-xs text-accent-foreground">
-                      {p.total_rewards} rewards
-                    </span>
+                    {p.id === DR_CHEN_DEFAULT.id ? (
+                      <span className="mt-2 inline-block rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
+                        Default
+                      </span>
+                    ) : (
+                      <span className="mt-2 inline-block rounded-full bg-accent/20 px-2 py-0.5 text-xs text-accent-foreground">
+                        {p.total_rewards} rewards
+                      </span>
+                    )}
                   </motion.button>
                 ))}
               </div>
@@ -186,24 +234,32 @@ function RoomsPageContent() {
   const [joinCode, setJoinCode] = useState("")
   const [showAuth, setShowAuth] = useState(false)
   const [showPersonaPicker, setShowPersonaPicker] = useState(false)
-  const [liveRooms, setLiveRooms] = useState<ApiRoom[]>([])
+  const [localRooms, setLocalRooms] = useState<{ code: string; persona: PersonaConfig | null }[]>([])
   const [isCreating, setIsCreating] = useState(false)
   const [isJoining, setIsJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, isLoading } = useAuth()
 
-  const loadLiveRooms = useCallback(async () => {
+  const loadLocalRooms = useCallback(() => {
     try {
-      const res = await listActiveRooms()
-      setLiveRooms(res.rooms || [])
+      const codes: string[] = JSON.parse(localStorage.getItem("created-rooms") || "[]")
+      const rooms = codes.map((code) => {
+        try {
+          const stored = localStorage.getItem(`room-persona-${code}`)
+          return { code, persona: stored ? (JSON.parse(stored) as PersonaConfig) : null }
+        } catch {
+          return { code, persona: null }
+        }
+      })
+      setLocalRooms(rooms.reverse())
     } catch {
-      setLiveRooms([])
+      setLocalRooms([])
     }
   }, [])
 
   useEffect(() => {
-    loadLiveRooms()
-  }, [loadLiveRooms])
+    loadLocalRooms()
+  }, [loadLocalRooms])
 
   useEffect(() => {
     if (searchParams.get("action") === "create" && isLoggedIn) {
@@ -219,13 +275,21 @@ function RoomsPageContent() {
     setShowPersonaPicker(true)
   }
 
-  const handlePersonaSelected = async (persona: Persona) => {
+  const handlePersonaSelected = (persona: Persona) => {
     setShowPersonaPicker(false)
     setIsCreating(true)
     setError(null)
     try {
-      const res = await createRoom(persona.id)
-      router.push(`/rooms/${res.room.id}`)
+      const code = generateRoomCode()
+      const personaConfig: PersonaConfig = {
+        id: persona.id,
+        name: persona.name,
+        subject: persona.subject,
+        systemPrompt: persona.system_prompt,
+        avatarColor: "#a78bfa",
+      }
+      storeRoomPersona(code, personaConfig)
+      router.push(`/classroom/${code}`)
     } catch (err: any) {
       setError(err.message || "Failed to create room")
       setIsCreating(false)
@@ -233,20 +297,21 @@ function RoomsPageContent() {
   }
 
   const handleJoinRoom = async () => {
-    if (!joinCode.trim()) return
+    const code = joinCode.trim().toUpperCase()
+    if (!code) return
     if (!isLoggedIn) {
       setShowAuth(true)
       return
     }
     setIsJoining(true)
     setError(null)
-    try {
-      const res = await joinRoom(joinCode)
-      router.push(`/rooms/${res.room.id}`)
-    } catch (err: any) {
-      setError(err.message || "Failed to join room")
+    const active = await checkRoomActive(code)
+    if (!active) {
+      setError("Room not found. Ask the host for the correct code.")
       setIsJoining(false)
+      return
     }
+    router.push(`/classroom/${code}`)
   }
 
   return (
@@ -284,7 +349,8 @@ function RoomsPageContent() {
             </motion.div>
           )}
 
-          <div className="mb-16 grid gap-6 md:grid-cols-2">
+          <div className="relative mb-16">
+            <div className="grid gap-6 md:grid-cols-2">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
@@ -357,11 +423,25 @@ function RoomsPageContent() {
                     ) : (
                       <Zap className="mr-2 h-4 w-4" />
                     )}
-                    Join
+                    {isJoining ? "Checking..." : "Join"}
                   </Button>
                 </div>
               </div>
             </motion.div>
+          </div>
+
+            {!isLoading && !isLoggedIn && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded-3xl bg-background/75 backdrop-blur-md"
+              >
+                <p className="text-xl font-semibold text-foreground">Sign in to continue</p>
+                <Button onClick={() => setShowAuth(true)} className="rounded-full px-8">
+                  Sign in
+                </Button>
+              </motion.div>
+            )}
           </div>
 
           <section className="mb-16">
@@ -381,10 +461,10 @@ function RoomsPageContent() {
               </Button>
             </motion.div>
 
-            {liveRooms.length > 0 ? (
+            {localRooms.length > 0 ? (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {liveRooms.map((room, i) => (
-                  <RoomCard key={room.id} room={room} index={i} />
+                {localRooms.map((room, i) => (
+                  <LocalRoomCard key={room.code} code={room.code} persona={room.persona} index={i} />
                 ))}
               </div>
             ) : (

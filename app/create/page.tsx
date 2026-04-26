@@ -1,8 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import { AuthModal } from "@/components/auth-modal"
@@ -10,14 +9,16 @@ import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/auth-context"
-import {
-  Users,
-  Sparkles,
+import { 
+  Plus, 
+  Users, 
+  Sparkles, 
+  Zap,
   ArrowRight,
   Palette,
   Brain,
   Wand2,
-  School,
+  Play
 } from "lucide-react"
 
 // Floating particles component
@@ -50,52 +51,16 @@ function FloatingParticles() {
   )
 }
 
-const CLASSROOM_NAME_KEY = "classroom-name"
-
 export default function CreatePage() {
-  const router = useRouter()
   const [showAuth, setShowAuth] = useState(false)
-  const [classCode, setClassCode] = useState("")
-  const [displayName, setDisplayName] = useState("")
-  const [formError, setFormError] = useState<string | null>(null)
-  const { isLoggedIn } = useAuth()
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(CLASSROOM_NAME_KEY)
-      if (stored) setDisplayName(stored)
-    } catch {
-      /* ignore */
-    }
-  }, [])
-
-  const handleJoinClassroom = (e: React.FormEvent) => {
-    e.preventDefault()
-    setFormError(null)
-    const raw = classCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, "")
-    if (!raw) {
-      setFormError("Enter a room code.")
-      return
-    }
-    const name = displayName.trim()
-    if (!name) {
-      setFormError("Enter the name others will see in the classroom.")
-      return
-    }
-    try {
-      localStorage.setItem(CLASSROOM_NAME_KEY, name)
-    } catch {
-      setFormError("Could not save your name in this browser (storage blocked).")
-      return
-    }
-    router.push(`/classroom/${raw}`)
-  }
+  const [joinCode, setJoinCode] = useState("")
+  const { isLoggedIn, isLoading } = useAuth()
 
   const features = [
     { icon: Palette, title: "Custom Personas", desc: "Design your tutor's personality" },
     { icon: Brain, title: "Adaptive AI", desc: "Learns how you learn" },
     { icon: Users, title: "Invite Friends", desc: "Study together in real-time" },
-    { icon: Wand2, title: "3D Classroom", desc: "Voice, chat, and whiteboard with your professor" },
+    { icon: Wand2, title: "Create Your Tutor", desc: "Build your perfect study buddy" },
   ]
 
   return (
@@ -146,107 +111,155 @@ export default function CreatePage() {
               transition={{ delay: 0.2 }}
               className="mt-4 text-lg text-muted-foreground"
             >
-              Enter a room code and your name to open the 3D classroom—no account required.
+              Create or join a room to start learning with AI tutors
             </motion.p>
           </motion.div>
 
-          {/* Join 3D classroom (same flow as /classroom/[roomCode]: code + display name) */}
-          <div className="mb-16 mx-auto max-w-lg">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              whileHover={{
-                scale: 1.01,
-                boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
-              }}
-              className="group relative overflow-hidden rounded-3xl bg-foreground p-8 text-card"
-              style={{ transformStyle: "preserve-3d", perspective: 1000 }}
-            >
-              <FloatingParticles />
+          {/* Main Cards */}
+          <div className="relative mb-16">
+            <div className="grid gap-8 md:grid-cols-2">
+              {/* Create Room Card */}
               <motion.div
-                className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-accent/30"
-                animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }}
-                transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
-              />
-              <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-card/10" />
-
-              <div className="relative">
+                initial={{ opacity: 0, x: -30, rotateY: -10 }}
+                animate={{ opacity: 1, x: 0, rotateY: 0 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+                whileHover={{
+                  scale: 1.02,
+                  rotateY: 5,
+                  boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)"
+                }}
+                className="group relative overflow-hidden rounded-3xl bg-foreground p-8 text-card"
+                style={{ transformStyle: "preserve-3d", perspective: 1000 }}
+              >
+                <FloatingParticles />
                 <motion.div
-                  className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent"
-                  whileHover={{ rotate: -6 }}
-                  animate={{
-                    y: [0, -5, 0],
-                    rotate: [0, 3, -3, 0],
-                  }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 3,
-                    ease: "easeInOut",
-                  }}
-                >
-                  <School className="h-8 w-8 text-accent-foreground" />
-                </motion.div>
+                  className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-accent/30"
+                  animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }}
+                  transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
+                />
+                <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-card/10" />
 
-                <h3 className="text-2xl font-bold">Join a classroom</h3>
-                <p className="mt-2 mb-6 text-card/70">
-                  Use the room code you were given, then choose how you appear to others in chat and voice.
-                </p>
-
-                <form onSubmit={handleJoinClassroom} className="space-y-4">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-card/60">
-                      Room code
-                    </label>
-                    <Input
-                      autoCapitalize="characters"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      placeholder="e.g. ABC125"
-                      value={classCode}
-                      onChange={(e) =>
-                        setClassCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))
-                      }
-                      className="h-12 rounded-xl border-0 bg-card/15 font-mono text-lg tracking-widest text-card placeholder:text-card/40 focus-visible:ring-accent"
-                      maxLength={16}
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-card/60">
-                      Your name
-                    </label>
-                    <Input
-                      placeholder="How should we call you?"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      className="h-12 rounded-xl border-0 bg-card/15 text-card placeholder:text-card/40 focus-visible:ring-accent"
-                      maxLength={64}
-                    />
-                  </div>
-                  {formError && (
-                    <p className="text-sm text-red-300" role="alert">
-                      {formError}
-                    </p>
-                  )}
-                  <Button
-                    type="submit"
-                    className="h-12 w-full rounded-full bg-card text-base font-medium text-foreground hover:bg-card/90"
+                <div className="relative">
+                  <motion.div
+                    className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent"
+                    whileHover={{ rotate: 90 }}
+                    animate={{
+                      y: [0, -5, 0],
+                      rotate: [0, 5, -5, 0]
+                    }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: 3,
+                      ease: "easeInOut"
+                    }}
                   >
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Enter classroom
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </form>
+                    <Plus className="h-8 w-8 text-accent-foreground" />
+                  </motion.div>
 
-                <p className="mt-6 text-center text-xs text-card/50">
-                  TutorMe account rooms live on{" "}
-                  <Link href="/rooms" className="underline underline-offset-2 hover:text-card">
-                    Learning Rooms
-                  </Link>
-                  .
-                </p>
-              </div>
-            </motion.div>
+                  <motion.h3
+                    className="text-2xl font-bold"
+                    animate={{ scale: [1, 1.02, 1] }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                  >
+                    Create a Room
+                  </motion.h3>
+                  <p className="mt-2 mb-6 text-card/70">
+                    Start a new learning session with an AI tutor and invite friends to join
+                  </p>
+
+                  <Button
+                    className="rounded-full bg-card text-foreground hover:bg-card/90"
+                    asChild
+                  >
+                    <Link href="/rooms?action=create">
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Create Room
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </motion.div>
+
+              {/* Join Room Card */}
+              <motion.div
+                initial={{ opacity: 0, x: 30, rotateY: 10 }}
+                animate={{ opacity: 1, x: 0, rotateY: 0 }}
+                transition={{ delay: 0.3, duration: 0.6 }}
+                whileHover={{
+                  scale: 1.02,
+                  rotateY: -5,
+                  boxShadow: "0 25px 50px -12px rgba(0,0,0,0.15)"
+                }}
+                className="group relative overflow-hidden rounded-3xl border border-border bg-card p-8"
+                style={{ transformStyle: "preserve-3d", perspective: 1000 }}
+              >
+                <motion.div
+                  className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-muted/50"
+                  animate={{ scale: [1, 1.3, 1] }}
+                  transition={{ repeat: Infinity, duration: 8, ease: "easeInOut" }}
+                />
+
+                <div className="relative">
+                  <motion.div
+                    className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted"
+                    animate={{
+                      y: [0, -5, 0],
+                      scale: [1, 1.05, 1]
+                    }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: 2.5,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <Play className="ml-0.5 h-8 w-8 text-foreground" />
+                  </motion.div>
+
+                  <motion.h3
+                    className="text-2xl font-bold text-foreground"
+                    animate={{ scale: [1, 1.02, 1] }}
+                    transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
+                  >
+                    Join a Room
+                  </motion.h3>
+                  <p className="mt-2 mb-6 text-muted-foreground">
+                    Enter a room code to join an existing study session with friends
+                  </p>
+
+                  <div className="flex gap-3">
+                    <Input
+                      placeholder="Enter room code..."
+                      value={joinCode}
+                      onChange={(e) => setJoinCode(e.target.value)}
+                      className="h-12 rounded-full border-0 bg-muted/50"
+                    />
+                    <Button
+                      variant="outline"
+                      className="h-12 rounded-full border-foreground/20 px-6"
+                      asChild
+                    >
+                      <Link href={joinCode.trim() ? `/classroom/${joinCode.trim().toUpperCase()}` : '#'}>
+                        <Zap className="mr-2 h-4 w-4" />
+                        Join
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {!isLoading && !isLoggedIn && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded-3xl bg-background/75 backdrop-blur-md"
+              >
+                <p className="text-xl font-semibold text-foreground">Sign in to continue</p>
+                <Button onClick={() => setShowAuth(true)} className="rounded-full px-8">
+                  Sign in
+                </Button>
+              </motion.div>
+            )}
           </div>
 
           {/* Features Grid */}
@@ -306,44 +319,6 @@ export default function CreatePage() {
             </div>
           </motion.section>
 
-          {/* CTA for non-logged in users */}
-          {!isLoggedIn && (
-            <motion.section
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="mt-16"
-            >
-              <div className="relative overflow-hidden rounded-3xl bg-accent p-8 text-center">
-                <motion.div
-                  className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-accent-foreground/10"
-                  animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
-                  transition={{ repeat: Infinity, duration: 8 }}
-                />
-                <div className="relative">
-                  <motion.div
-                    className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-foreground/20"
-                    animate={{ rotate: [0, 10, -10, 0] }}
-                    transition={{ repeat: Infinity, duration: 3 }}
-                  >
-                    <Sparkles className="h-7 w-7 text-accent-foreground" />
-                  </motion.div>
-                  <h3 className="text-2xl font-bold text-accent-foreground">Ready to start learning?</h3>
-                  <p className="mt-2 text-accent-foreground/70">
-                    Sign up now to create and join learning rooms with AI tutors
-                  </p>
-                  <Button
-                    size="lg"
-                    className="mt-6 rounded-full bg-accent-foreground text-accent hover:bg-accent-foreground/90"
-                    onClick={() => setShowAuth(true)}
-                  >
-                    Get Started Free
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </motion.section>
-          )}
         </div>
       </main>
       

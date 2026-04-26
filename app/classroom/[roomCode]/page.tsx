@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { ClassroomRoot } from "@/components/ClassroomRoot";
+import { createPartyNetwork } from "@/lib/partyNetwork";
 
 export default function ClassroomPage({
   params,
@@ -11,6 +12,9 @@ export default function ClassroomPage({
   const { roomCode } = use(params);
   const [name, setName] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  // Stable network instance — created once per page mount so ClassroomRoot's
+  // useEffect deps don't trigger a leave/rejoin on every render.
+  const network = useMemo(() => createPartyNetwork(), []);
 
   useEffect(() => {
     try {
@@ -52,5 +56,5 @@ export default function ClassroomPage({
     );
   }
 
-  return <ClassroomRoot roomCode={roomCode.toUpperCase()} selfName={name} />;
+  return <ClassroomRoot roomCode={roomCode.toUpperCase()} selfName={name} network={network} />;
 }

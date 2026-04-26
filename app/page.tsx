@@ -142,18 +142,19 @@ function AnimatedTutor() {
       
       {/* Speech bubble */}
       <motion.div
-        className="absolute -right-20 top-10 rounded-2xl bg-card px-4 py-3 shadow-lg ring-1 ring-border"
-        initial={{ opacity: 0, scale: 0, x: -20 }}
+        className="absolute -left-32 top-16 max-w-[180px] rounded-2xl bg-card px-4 py-3 shadow-lg ring-1 ring-border"
+        initial={{ opacity: 0, scale: 0, x: 20 }}
         animate={{ opacity: 1, scale: 1, x: 0 }}
         transition={{ delay: 1, duration: 0.5, type: "spring" }}
       >
-        <p className="text-sm font-medium text-foreground">Hey bestie! Ready to learn?</p>
-        <div className="absolute -left-2 top-4 h-4 w-4 rotate-45 bg-card ring-1 ring-border" />
+        <p className="text-xs font-bold text-foreground">Hi, I&apos;m Tutor Me.</p>
+        <p className="mt-1 text-[10px] text-muted-foreground">Your AI learning partner. Let&apos;s learn, explore, and achieve together!</p>
+        <div className="absolute -right-2 top-4 h-4 w-4 rotate-45 bg-card ring-1 ring-border" />
       </motion.div>
 
-      {/* Main 3D Bear Tutor image - full body visible */}
+      {/* Main 3D Bear Tutor image - full body visible with transparent background */}
       <motion.div
-        className="absolute inset-0"
+        className="absolute inset-0 flex items-center justify-center"
         animate={{ 
           scale: [1, 1.02, 1],
         }}
@@ -165,10 +166,11 @@ function AnimatedTutor() {
         style={{ transformStyle: "preserve-3d" }}
       >
         <Image
-          src="/images/3d-bear-tutor.jpg"
-          alt="3D Bear Tutor"
-          fill
-          className="pointer-events-none object-contain drop-shadow-2xl"
+          src="/images/tutor-bear-only.jpg"
+          alt="Tutor Me Bear"
+          width={500}
+          height={550}
+          className="pointer-events-none object-contain"
           style={{ 
             filter: "drop-shadow(0 25px 50px rgba(0,0,0,0.25))",
             transform: "translateZ(50px)"
@@ -498,13 +500,10 @@ function TestimonialSection() {
           initial={{ opacity: 0, scale: 0 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
+          transition={{ delay: avatar.delay, duration: 0.5, type: "spring" }}
           animate={{ y: [0, -8, 0] }}
-          transition={{
-            delay: avatar.delay,
-            duration: 0.5,
-            type: "spring",
-            y: { repeat: Infinity, duration: 3 + i * 0.3, ease: "easeInOut" },
-          }}
+          //@ts-expect-error - framer-motion types
+          transition={{ y: { repeat: Infinity, duration: 3 + i * 0.3, ease: "easeInOut" }}}
         >
           <Image
             src={avatar.image}
@@ -576,8 +575,18 @@ function TestimonialSection() {
   )
 }
 
+// AI Tutor characters for the carousel (different from masterpiece gallery)
+const aiTutorCharacters = [
+  { id: "ai-1", name: "Professor Owl", subject: "Mathematics", persona: "Wise & Patient", rating: "4.9", thumbnail: "/images/tutor-math.jpg" },
+  { id: "ai-2", name: "Robo Scientist", subject: "Science", persona: "Curious Explorer", rating: "4.8", thumbnail: "/images/tutor-science.jpg" },
+  { id: "ai-3", name: "Foxy Reader", subject: "English", persona: "Storyteller", rating: "4.9", thumbnail: "/images/tutor-english.jpg" },
+  { id: "ai-4", name: "Turtle Historian", subject: "History", persona: "Time Traveler", rating: "4.7", thumbnail: "/images/tutor-history.jpg" },
+]
+
 // Tutor preview carousel
 function TutorCarousel({ onTutorClick }: { onTutorClick: () => void }) {
+  const allTutors = [...aiTutorCharacters, ...aiTutorCharacters, ...aiTutorCharacters]
+  
   return (
     <section className="overflow-hidden py-20">
       <div className="mx-auto max-w-6xl px-6">
@@ -600,7 +609,7 @@ function TutorCarousel({ onTutorClick }: { onTutorClick: () => void }) {
         animate={{ x: [0, -1200] }}
         transition={{ repeat: Infinity, duration: 40, ease: "linear" }}
       >
-        {[...tutors, ...tutors].map((tutor, i) => (
+        {allTutors.map((tutor, i) => (
           <motion.button
             key={`${tutor.id}-${i}`}
             onClick={onTutorClick}
@@ -720,12 +729,12 @@ export default function HomePage() {
         style={{ opacity: heroOpacity, scale: heroScale }}
         className="relative min-h-screen overflow-hidden pt-32"
       >
-        {/* Giant typography background with bounce */}
+        {/* Giant typography background with bounce - darker text */}
         <motion.h1
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="pointer-events-none absolute left-1/2 top-20 -translate-x-1/2 whitespace-nowrap text-[14vw] font-black tracking-tighter text-foreground/[0.04] lg:text-[200px]"
+          className="pointer-events-none absolute left-1/2 top-20 -translate-x-1/2 whitespace-nowrap text-[14vw] font-black tracking-tighter text-foreground/[0.15] lg:text-[200px]"
         >
           {"TUTOR ME.".split("").map((char, i) => (
             <motion.span
@@ -754,18 +763,18 @@ export default function HomePage() {
               className="absolute left-0 top-1/3 hidden lg:block"
             >
               <div className="flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  {[1, 2, 3].map((i) => (
-                    <Image
-                      key={i}
-                      src={`https://images.unsplash.com/photo-${1494790108377 + i * 10000}?w=40&h=40&fit=crop`}
-                      alt=""
-                      width={40}
-                      height={40}
-                      className="rounded-full ring-2 ring-card"
-                    />
-                  ))}
-                </div>
+                <motion.div 
+                  className="relative h-16 w-16 overflow-hidden rounded-2xl shadow-lg"
+                  animate={{ y: [0, -5, 0] }}
+                  transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                >
+                  <Image
+                    src="/images/happy-students.jpg"
+                    alt="Happy students"
+                    fill
+                    className="object-cover"
+                  />
+                </motion.div>
                 <div>
                   <p className="text-2xl font-bold">
                     <AnimatedCounter value={2} suffix="M+" />
@@ -862,8 +871,8 @@ export default function HomePage() {
             transition={{ delay: 0.1 }}
             className="mt-6 text-4xl font-bold tracking-tight text-foreground lg:text-6xl"
           >
-            A place to display your{" "}
-            <span className="italic">masterpiece.</span>
+            Find the{" "}
+            <span className="italic">best tutor.</span>
           </motion.h2>
 
           <MasterpieceGallery />

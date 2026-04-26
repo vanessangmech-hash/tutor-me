@@ -121,18 +121,33 @@ export function VoiceControl() {
 
   return (
     <div className="pointer-events-auto flex flex-col items-end gap-2">
-      <button
-        onClick={toggle}
-        className={[
-          "flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all",
-          active
-            ? "bg-red-500 text-white ring-4 ring-red-300/50"
-            : "bg-white text-black hover:scale-105",
-        ].join(" ")}
-        title={active ? "End voice call" : "Talk to the professor"}
-      >
-        <MicIcon muted={!active} />
-      </button>
+      {/* Idle prompt — shown before first activation */}
+      {!active && (
+        <div className="flex items-center gap-2 rounded-full bg-black/70 px-3 py-1.5 text-xs text-white backdrop-blur">
+          <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+          Click mic to talk to {persona?.name ?? "the professor"}
+        </div>
+      )}
+
+      <div className="relative">
+        {/* Pulsing ring when idle */}
+        {!active && (
+          <span className="absolute inset-0 animate-ping rounded-full bg-white/30" />
+        )}
+        <button
+          onClick={toggle}
+          className={[
+            "relative flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all",
+            active
+              ? "bg-red-500 text-white ring-4 ring-red-300/50"
+              : "bg-white text-black hover:scale-105",
+          ].join(" ")}
+          title={active ? "End voice call" : "Talk to the professor"}
+        >
+          <MicIcon muted={!active} />
+        </button>
+      </div>
+
       {active && (
         <div className="rounded-full bg-black/70 px-3 py-1 text-xs text-white backdrop-blur">
           {voice.speaking === "professor"

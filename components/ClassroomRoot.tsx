@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Classroom } from "@/components/classroom/Classroom";
 import { ChatBox } from "@/components/ui/ChatBox";
 import { NotesPanel } from "@/components/ui/NotesPanel";
@@ -61,9 +62,20 @@ export function ClassroomRoot({ roomCode, selfName, network }: Props) {
     <div className="relative h-screen w-screen overflow-hidden bg-black">
       <Classroom chatInputFocused={chatFocused} />
 
-      {/* Top-left: room code */}
-      <div className="pointer-events-none absolute left-4 top-4 rounded-md bg-black/60 px-3 py-2 text-xs text-white backdrop-blur">
-        <div className="font-mono tracking-wider">ROOM {roomCode}</div>
+      {/* Top-left: back button + room code */}
+      <div className="absolute left-4 top-4 flex items-center gap-3">
+        <Link
+          href="/"
+          className="flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-2 text-xs text-white backdrop-blur transition-colors hover:bg-black/80"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 5l-7 7 7 7" />
+          </svg>
+          Home
+        </Link>
+        <div className="pointer-events-none rounded-md bg-black/60 px-3 py-2 text-xs text-white backdrop-blur">
+          <div className="font-mono tracking-wider">ROOM {roomCode}</div>
+        </div>
       </div>
 
       {/* Top-right: mic */}
