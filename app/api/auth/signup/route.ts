@@ -27,6 +27,8 @@ export async function POST(request: NextRequest) {
     }
 
     const accessToken =
+      (data as any)?.accessToken ||
+      (data as any)?.session?.accessToken ||
       (data as any)?.session?.access_token ||
       (data as any)?.access_token ||
       (data as any)?.token

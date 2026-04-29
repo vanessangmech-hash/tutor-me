@@ -13,7 +13,11 @@ pnpm dev:turbo      # next dev --turbopack (opt-in)
 pnpm build          # next build
 pnpm lint           # eslint .
 npx tsc --noEmit    # type-check (build itself ignores TS errors — see next.config.mjs)
+pnpm party:dev      # run the PartyKit server locally on :1999 (classroom multiplayer)
+pnpm party:deploy   # deploy party/index.ts to PartyKit
 ```
+
+The classroom is multiplayer; without `pnpm party:dev` running (or `NEXT_PUBLIC_PARTYKIT_HOST` pointing at a deployed party), `/classroom/[roomCode]` will fail to connect. The standalone `<ClassroomRoot />` (no `network` prop) still works offline via `lib/mockNetwork.ts`.
 
 There is no test runner configured. `npm test` referenced in `SETUP.md` does not exist as a script.
 
@@ -42,7 +46,20 @@ The frontend **never talks to InsForge directly**. All backend calls go through 
 
 `lib/api.ts` wraps these calls for the client (e.g. `createRoom`, `joinRoom`, `sendMessage`, `forkPersona`). Add a new backend operation by: (a) writing/extending an edge function in `backend/functions/`, (b) adding a typed wrapper in `lib/api.ts` — no new route file needed; `[fn]` covers any function name.
 
-Realtime is the one exception: `/api/realtime/config` returns `{ baseUrl, anonKey, accessToken }` to authenticated clients so `lib/insforge.ts` can open a direct WebSocket via the InsForge SDK.
+Realtime is the one exception: `/api/realtime/config` returns `{ baseUrl, anonKey, accessToken }` to authenticated clients so `lib/insforge.ts` can open a direct WebSocket via the InsForge SDK. **Note**: the live classroom does not use this path anymore — it uses PartyKit (see below). The InsForge realtime config endpoint and `lib/insforge.ts` are still in the tree but no current page wires them up.
+
+### Classroom multiplayer (PartyKit)
+
+`app/classroom/[roomCode]/page.tsx` instantiates `createPartyNetwork()` (`lib/partyNetwork.ts`) and passes it to `<ClassroomRoot />`. The server lives in `party/index.ts` (entry declared in `partykit.json`) and brokers `hello`/`state`/`chat`/`persona`/`whiteboard`/`leave`/`snapshot` messages — wire types are duplicated at the top of both files and **must stay in sync**. `NEXT_PUBLIC_PARTYKIT_HOST` selects the host (defaults to `localhost:1999`). PartyKit only handles transport — chat-handler / rewards / persona persistence still go through InsForge edge functions.
+
+### Auth and Google OAuth
+
+Email/password flows live in `app/api/auth/{login,signup,logout,me,profile}/route.ts`. Google OAuth is a two-step PKCE dance through InsForge:
+
+1. `GET /api/auth/google` calls `client.auth.signInWithOAuth({ provider: 'google', redirectTo: '/api/auth/callback' })`, sets the returned `codeVerifier` in an HTTP-only `insforge_pkce_verifier` cookie, and 302s to Google.
+2. `GET /api/auth/callback` reads the `code` (or `insforge_code`) query param + the verifier cookie, calls `client.auth.exchangeOAuthCode`, and stores the access token via `setSessionToken` (the same `insforge_session` cookie used by email/password).
+
+OAuth errors redirect back to `/?auth_error=...` rather than throwing — check the query string when debugging.
 
 ### WunderGraph Cosmo (status)
 
@@ -63,7 +80,7 @@ Apply migrations in numeric order: `01` → `02` → `03` (realtime channels) �
 
 ### Classroom (3D + voice)
 
-`components/ClassroomRoot.tsx` mounts a React Three Fiber scene (`components/classroom/`) and overlays chat/voice/notes UI. State is centralized in `lib/useClassroomStore.ts` (Zustand): identity, remote players, messages, persona, whiteboard, voice. A `ClassroomNetwork` interface (`types/classroom.ts`) abstracts the realtime transport — `lib/mockNetwork.ts` is the offline fallback used when no real network is passed in, which keeps the classroom feature self-demoable. VAPI integration lives in `lib/vapi.ts` and uses the public key `NEXT_PUBLIC_VAPI_PUBLIC_KEY`.
+`components/ClassroomRoot.tsx` mounts a React Three Fiber scene (`components/classroom/`) and overlays chat/voice/notes UI. State is centralized in `lib/useClassroomStore.ts` (Zustand): identity, remote players, messages, persona, whiteboard, voice. A `ClassroomNetwork` interface (`types/classroom.ts`) abstracts the transport — current implementations are `lib/partyNetwork.ts` (PartyKit, used by `/classroom/[roomCode]`) and `lib/mockNetwork.ts` (offline fallback when no `network` prop is passed). VAPI integration lives in `lib/vapi.ts` and uses the public key `NEXT_PUBLIC_VAPI_PUBLIC_KEY`.
 
 ### Path alias
 
@@ -73,7 +90,7 @@ Apply migrations in numeric order: `01` → `02` → `03` (realtime channels) �
 
 Two separate envs — do not mix them up:
 
-- **`.env.local`** (Next.js): `INSFORGE_BASE_URL`, `INSFORGE_ANON_KEY` (server-only, no `NEXT_PUBLIC_`), `NEXT_PUBLIC_VAPI_PUBLIC_KEY`.
+- **`.env.local`** (Next.js): `INSFORGE_BASE_URL`, `INSFORGE_ANON_KEY` (server-only, no `NEXT_PUBLIC_`), `NEXT_PUBLIC_VAPI_PUBLIC_KEY`, `NEXT_PUBLIC_PARTYKIT_HOST` (e.g. `localhost:1999` in dev).
 - **InsForge project / `backend/.env`** (Deno edge functions): `AKASHML_API_KEY`, `GHOST_CONNECTION_STRING`, `INSFORGE_BASE_URL`, `ANON_KEY`, `TINYFISH_BASE_URL`, `TINYFISH_API_KEY`.
 
 Build-time "Missing Insforge env vars" errors are expected on a clean `pnpm build` — env vars are validated at request time inside `getInsforgeServerClient`, not at build. Look above that error for the real failure.

@@ -20,7 +20,10 @@
       "Bash(npm install *)",
       "Bash(git fetch *)",
       "Bash(git checkout *)",
-      "Bash(git ls-tree *)"
+      "Bash(git ls-tree *)",
+      "Bash(npx @insforge/cli whoami)",
+      "Bash(npx @insforge/cli current)",
+      "Bash(npx @insforge/cli metadata --json)"
     ]
   }
 }
