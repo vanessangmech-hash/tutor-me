@@ -171,9 +171,10 @@ function AnimatedTutor() {
           width={500}
           height={550}
           className="pointer-events-none object-contain"
-          style={{ 
+          style={{
             filter: "drop-shadow(0 25px 50px rgba(0,0,0,0.25))",
-            transform: "translateZ(50px)"
+            transform: "translateZ(50px)",
+            height: "auto"
           }}
           priority
         />
